@@ -23,7 +23,7 @@ textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10
 </style>
 </head>
 <body>
-<header><h1>🔥 완주소방서 화재상황보고 V1.2</h1><small>현장 입력 최소화 · 법정리 선택 · 건축물대장 구조 자동조회</small></header>
+<header><h1>🔥 완주소방서 화재상황보고 V1.2</h1><small>현장 입력 최소화 · 주소 수기입력 · 건축물대장 구조 조회</small></header>
 <main>
 <div class="card"><h2>기본정보</h2><div class="grid">
 <label>작성자<input id="writer"></label><label>보고책임자<input id="boss"></label><label>접수시간<input id="recv" type="time" step="1"></label>
@@ -33,23 +33,22 @@ textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10
 <label>발생일<input id="date" type="date"></label>
 <label>종료상태<select id="status"><option>화재완진</option><option>자체진화</option><option>화재진압 중</option></select></label>
 <label>종료시간<input id="end" type="time"></label>
-<label>읍·면<select id="town" onchange="updateRi()"><option value="">선택</option><option>삼례읍</option><option>봉동읍</option><option>용진읍</option><option>상관면</option><option>이서면</option><option>소양면</option><option>구이면</option><option>고산면</option><option>비봉면</option><option>운주면</option><option>화산면</option><option>동상면</option><option>경천면</option></select></label>
-<label>리<select id="ri"><option value="">읍·면을 먼저 선택</option></select></label>
+<label>읍·면<select id="town" onchange="resetBuilding()"><option value="">선택</option><option>삼례읍</option><option>봉동읍</option><option>용진읍</option><option>상관면</option><option>이서면</option><option>소양면</option><option>구이면</option><option>고산면</option><option>비봉면</option><option>운주면</option><option>화산면</option><option>동상면</option><option>경천면</option></select></label>
+<label>리<input id="ri" placeholder="예: 하리"></label>
 <label>지번<input id="jibun" placeholder="예: 1290-448 / 산 12-3"></label>
 </div>
-<button class="btn lookup" onclick="addressCheck()">🔎 주소 확인</button>
-<label>확인된 도로명주소<input id="road" class="auto" placeholder="도로명주소 API 승인 후 자동연결 · 현재 직접입력 가능"></label>
-<div id="addrStatus" class="hint">읍·면 → 법정리 → 지번 순으로 선택해 주세요.</div>
+<label>도로명주소(수기)<input id="road" placeholder="예: 하리로 177-5 · 없으면 비워두기"></label>
+<div id="addrStatus" class="hint">읍·면, 리, 지번은 수기로 입력합니다. 도로명주소가 없으면 비워두면 지번주소로 보고서에 표시됩니다.</div>
 
 <div class="grid">
 <label>대상<input id="target"></label>
-<label>선착대<select id="first" onchange="distanceCheck()"><option value="">선택</option><option>봉동119안전센터</option><option>소양지역대</option><option>삼례119안전센터</option><option>고산119안전센터</option><option>운주지역대</option><option>화산지역대</option><option>혁신119안전센터</option><option>구이119안전센터</option><option>상관지역대</option></select></label>
-<label>선착대 거리 km<input id="firstKm" class="auto" type="number" step=".1" placeholder="자동 계산 예정"></label>
-<label>본서 거리 km<input id="hqKm" class="auto" type="number" step=".1" placeholder="자동 계산 예정"></label>
+<label>선착대<select id="first"><option value="">선택</option><option>봉동119안전센터</option><option>소양지역대</option><option>삼례119안전센터</option><option>고산119안전센터</option><option>운주지역대</option><option>화산지역대</option><option>혁신119안전센터</option><option>구이119안전센터</option><option>상관지역대</option></select></label>
+<label>선착대 거리 km<input id="firstKm" type="number" step=".1" placeholder="직접입력"></label>
+<label>본서 거리 km<input id="hqKm" type="number" step=".1" placeholder="직접입력"></label>
 </div>
 
 <button id="buildingBtn" class="btn building" onclick="lookupBuilding()">🏢 건축물대장 조회</button>
-<div id="buildingStatus" class="hint">법정리와 지번을 선택한 뒤 조회하면 구조·지붕·층수·연면적·용도를 자동으로 가져옵니다.</div>
+<div id="buildingStatus" class="hint">읍·면, 리, 지번을 입력한 뒤 조회하면 건축물대장 자료를 확인할 수 있습니다.</div>
 <div id="buildingResult" class="resultbox">
 <label>조회된 건물<select id="buildingChoice" onchange="applyBuildingChoice()"></select></label>
 <div id="buildingDetail" class="hint"></div>
@@ -87,39 +86,18 @@ textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10
 <script>
 const API_URL='https://script.google.com/macros/s/AKfycbwuMePzT5oDabWeh216B0szP87G29MLcZSad_cU2iGnYSStEtob7UVs4SecWLr8Y8eZWw/exec';
 const $=x=>document.getElementById(x),v=x=>$(x)?.value||'',n=x=>Number(v(x)||0);
-const RI={
-'삼례읍':['구와리','삼례리','석전리','수계리','신금리','신탁리','어전리','하리','해전리','후정리'],
-'봉동읍':['고천리','구만리','구미리','구암리','낙평리','둔산리','성덕리','신성리','용암리','율소리','은하리','장구리','장기리','제내리'],
-'용진읍':['간중리','구억리','상삼리','상운리','신지리','용흥리','운곡리'],
-'상관면':['마치리','신리','용암리','의암리','죽림리'],
-'이서면':['갈산리','금계리','금평리','남계리','반교리','상개리','용서리','은교리','이문리','이성리'],
-'소양면':['대흥리','명덕리','신교리','신원리','신촌리','죽절리','해월리','화심리','황운리'],
-'구이면':['계곡리','광곡리','덕천리','두현리','백여리','안덕리','원기리','평촌리','항가리'],
-'고산면':['남봉리','삼기리','서봉리','성재리','소향리','양야리','어우리','오산리','율곡리','읍내리','화정리'],
-'비봉면':['내월리','대치리','백도리','봉산리','소농리','수선리','이전리'],
-'운주면':['고당리','구제리','금당리','산북리','완창리','장선리'],
-'화산면':['성북리','승치리','와룡리','우월리','운곡리','운산리','운제리','종리','춘산리','화월리','화평리'],
-'동상면':['대아리','사봉리','수만리','신월리'],
-'경천면':['가천리','경천리','용복리']
-};
 let BUILDINGS=[];
 if(!$('date').value)$('date').value=new Date().toISOString().slice(0,10);
 
-function updateRi(selected=''){
-  const town=v('town'),r=$('ri');
-  r.innerHTML='<option value="">'+(town?'리 선택':'읍·면을 먼저 선택')+'</option>';
-  (RI[town]||[]).forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;r.appendChild(o)});
-  if(selected&&RI[town]?.includes(selected))r.value=selected;
-  BUILDINGS=[];$('buildingResult').classList.remove('show');$('buildingStatus').textContent='법정리와 지번을 선택한 뒤 건축물대장을 조회해 주세요.';
-}
-
-function addressCheck(){
-  if(!v('town')||!v('ri')||!v('jibun')){alert('읍·면, 리, 지번을 모두 선택·입력해 주세요.');return}
-  $('addrStatus').textContent=`지번주소 확인: 완주군 ${v('town')} ${v('ri')} ${v('jibun')} · 도로명주소 자동변환은 주소 API 승인 후 연결합니다.`;
+function resetBuilding(){
+  BUILDINGS=[];
+  $('buildingResult').classList.remove('show');
+  $('buildingStatus').className='hint';
+  $('buildingStatus').textContent='읍·면, 리, 지번을 입력한 뒤 건축물대장을 조회해 주세요.';
 }
 
 async function lookupBuilding(){
-  if(!v('town')||!v('ri')||!v('jibun')){alert('읍·면, 리, 지번을 모두 선택·입력해 주세요.');return}
+  if(!v('town')||!v('ri')||!v('jibun')){alert('읍·면, 리, 지번을 모두 입력해 주세요.');return}
   const b=$('buildingBtn'),st=$('buildingStatus');
   b.disabled=true;st.className='hint';st.textContent='건축물대장 조회 중...';
   $('buildingResult').classList.remove('show');
@@ -160,12 +138,6 @@ function applyBuildingChoice(){
   $('buildingDetail').textContent=parts.join(' · ');
 }
 
-function distanceCheck(){
-  if(!v('first'))return;
-  if(!v('road')&&!v('jibun')){alert('먼저 화재대상 주소를 입력해 주세요.');return}
-  $('addrStatus').textContent='선착대·본서 차량 이동거리는 길찾기 API 연결 단계에서 자동 계산합니다.';
-}
-
 function syncCause(){
   const s=v('summary').trim();if(!s)return;
   const parts=s.split(/[.。\n]/).map(x=>x.trim()).filter(Boolean),last=parts[parts.length-1]||'';
@@ -187,7 +159,7 @@ function render(){
   $('preview').textContent=`완주군 ${v('town')} ${v('ri')} ${v('target')} 화재\n\n수신: 전북특별도지사 / 참조: 119종합상황실장\n발신: 완주소방서장 / 발신지: 완주소방서 현장대응단\n작성자: ${v('writer')} / 보고책임자: ${v('boss')} / 접수시간: ${v('recv')}\n\n1. 발생개요\n 가. 일시: ${v('date')} ${v('recv')}(접수) ~ ${v('end')}(${v('status')})\n   ※ 선착대 ${v('first')} ${v('firstKm')}km, 본서 ${v('hqKm')}km\n 나. 장소: ${address()}\n 다. 구조: ${v('structure')}\n 라. 대상: ${v('target')}\n 마. 원인: ${v('cause')}\n 바. 사고개요: ${v('summary')}\n\n2. 피해상황\n 가. 인명피해: ${v('human')} ${v('humanDetail')}\n 나. 재산피해: ${total.toLocaleString()}천원(부동산 ${n('real').toLocaleString()}천원, 동산 ${n('move').toLocaleString()}천원)\n   ○ 부동산: ${v('realDetail')||'해당없음'}\n   ○ 동산: ${v('moveDetail')||'해당없음'}\n\n3. 동원상황\n 가. 인원: ${people}명(소방 ${n('pFire')}, 경찰 ${n('pPolice')}, 유관기관 ${n('pAgency')}, 의소대 ${n('pVolunteer')}${v('pOther')?', '+v('pOther'):''})\n 나. 장비: ${n('vehicleN')}대(${v('vehicles')})\n\n4. 조치사항\n${v('actions')}\n\n5. 그 밖의 사항\n ○ 보험가입: ${v('insurance')}${v('insuranceDetail')?' - '+v('insuranceDetail'):''}\n ○ 특이사항: ${v('special')||'없음'}`;
 }
 function saveLocal(show=true){const d={};document.querySelectorAll('[id]').forEach(e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.tagName))d[e.id]=e.value});localStorage.setItem('wanjuFireReportV1',JSON.stringify(d));if(show)alert('현재 기기에 임시저장했습니다.')}
-function restoreLocal(){const ss=localStorage.getItem('wanjuFireReportV1');if(!ss)return;try{const d=JSON.parse(ss);if(d.town&&$('town'))$('town').value=d.town;updateRi(d.ri||'');Object.entries(d).forEach(([k,x])=>{if(k==='town'||k==='ri')return;if($(k))$(k).value=x});}catch(e){updateRi()}}
+function restoreLocal(){const ss=localStorage.getItem('wanjuFireReportV1');if(!ss)return;try{const d=JSON.parse(ss);Object.entries(d).forEach(([k,x])=>{if($(k))$(k).value=x});resetBuilding();}catch(e){resetBuilding()}}
 restoreLocal();
 </script>
 </body>
