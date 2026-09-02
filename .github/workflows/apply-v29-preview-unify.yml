@@ -1,0 +1,52 @@
+name: Apply V2.9 preview unify
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v29-preview-unify.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unify preview and output format
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('완주소방서 화재상황보고 V2.8','완주소방서 화재상황보고 V2.9')
+          s=s.replace('현장 클릭 입력 중심 · 2025 양식 보고서 출력 · JPG/HWPX 저장','현장 클릭 입력 중심 · 2025 양식 미리보기/출력 동일 · JPG/HWPX 저장')
+
+          old_buttons='''<button class="btn red" onclick="render()">보고서 미리보기</button> <button class="btn blue" onclick="showReportOutput()">🖨 보고서 출력하기</button>'''
+          new_buttons='''<button class="btn red" onclick="showReportOutput()">보고서 미리보기</button> <button class="btn blue" onclick="showReportOutput()">🖨 보고서 출력하기</button>'''
+          if old_buttons not in s:
+              raise SystemExit('button block not found')
+          s=s.replace(old_buttons,new_buttons,1)
+
+          old_preview='''<div class="card"><h2>보고서 미리보기</h2><div id="preview" class="preview">입력 후 보고서 미리보기를 누르세요.</div></div>\n'''
+          if old_preview not in s:
+              raise SystemExit('old preview block not found')
+          s=s.replace(old_preview,'',1)
+
+          a=s.find('function render(){')
+          b=s.find('function hEsc(',a)
+          if a<0 or b<0:
+              raise SystemExit('render function markers not found')
+          s=s[:a]+'function render(){showReportOutput()}' + s[b:]
+
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit V2.9
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "V2.9 보고서 미리보기와 출력 양식 통일" || exit 0
+          git push
