@@ -1,0 +1,131 @@
+name: Apply V2.8 report export
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v28-report-export.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build HWPX template
+        shell: bash
+        run: |
+          set -e
+          TMP=/tmp/hwpx-template
+          rm -rf "$TMP"
+          mkdir -p "$TMP/Contents" "$TMP/META-INF" "$TMP/Preview"
+          BASE='https://raw.githubusercontent.com/orientpine/honeypot/main/plugins/hwpx-generator/skills/hwpx-core/templates/base'
+          REPORT='https://raw.githubusercontent.com/orientpine/honeypot/main/plugins/hwpx-generator/skills/hwpx-core/templates/report'
+          curl -fsSL "$BASE/mimetype" -o "$TMP/mimetype"
+          curl -fsSL "$BASE/settings.xml" -o "$TMP/settings.xml"
+          curl -fsSL "$BASE/version.xml" -o "$TMP/version.xml"
+          curl -fsSL "$BASE/Contents/content.hpf" -o "$TMP/Contents/content.hpf"
+          curl -fsSL "$REPORT/header.xml" -o "$TMP/Contents/header.xml"
+          curl -fsSL "$REPORT/section0.xml" -o "$TMP/Contents/section0.xml"
+          curl -fsSL "$BASE/META-INF/container.xml" -o "$TMP/META-INF/container.xml"
+          curl -fsSL "$BASE/META-INF/container.rdf" -o "$TMP/META-INF/container.rdf"
+          curl -fsSL "$BASE/META-INF/manifest.xml" -o "$TMP/META-INF/manifest.xml"
+          printf '화재 등 사고상황보고서' > "$TMP/Preview/PrvText.txt"
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile, xml.etree.ElementTree as ET
+          root=Path('/tmp/hwpx-template')
+          out=Path('report-template.hwpx')
+          files=[
+            'version.xml','settings.xml',
+            'META-INF/container.xml','META-INF/container.rdf','META-INF/manifest.xml',
+            'Contents/content.hpf','Contents/header.xml','Contents/section0.xml',
+            'Preview/PrvText.txt'
+          ]
+          with zipfile.ZipFile(out,'w') as z:
+            z.write(root/'mimetype','mimetype',compress_type=zipfile.ZIP_STORED)
+            for rel in files:
+              z.write(root/rel,rel,compress_type=zipfile.ZIP_DEFLATED)
+          with zipfile.ZipFile(out) as z:
+            infos=z.infolist()
+            assert infos[0].filename=='mimetype'
+            assert infos[0].compress_type==zipfile.ZIP_STORED
+            for rel in ['version.xml','settings.xml','META-INF/container.xml','Contents/content.hpf','Contents/header.xml','Contents/section0.xml']:
+              ET.fromstring(z.read(rel))
+          PY
+
+      - name: Patch V2.8 report output and exports
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('완주소방서 화재상황보고 V2.7','완주소방서 화재상황보고 V2.8')
+          s=s.replace('현장 클릭 입력 중심 · 동원인원 숫자키패드 · 조치사항 빠른선택','현장 클릭 입력 중심 · 2025 양식 보고서 출력 · JPG/HWPX 저장')
+
+          libs='''<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>'''
+          if 'html2canvas@1.4.1' not in s:
+            s=s.replace('</head>',libs+'</head>',1)
+
+          css=r'''.reportWrap{display:none}.reportWrap.show{display:block}.exportBar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.reportPaper{position:relative;width:794px;max-width:100%;min-height:1123px;margin:0 auto;background:#fff;color:#111;padding:55px 42px 38px;border:1px solid #9ca3af;font-family:"Malgun Gothic","Noto Sans KR",sans-serif;font-size:15px;line-height:1.5}.reportSecurity{position:absolute;right:42px;top:25px;border:1px solid #dc2626;color:#dc2626;padding:4px 14px;font-weight:800;font-size:14px}.reportDocTitle{text-align:center;font-weight:900;font-size:26px;margin:8px 0 10px;letter-spacing:-1px}.reportPaper table{width:100%;border-collapse:collapse;table-layout:fixed}.reportPaper th,.reportPaper td{border:1px solid #555;padding:5px 7px;vertical-align:top;font-weight:400}.reportPaper th{width:76px;text-align:center;background:#fff}.reportTop td{width:50%}.reportMeta th{width:74px}.reportMeta .wide{width:auto}.reportBody{padding:12px 4px 0}.reportSec{font-size:17px;margin:8px 0 2px}.reportLine{margin:1px 0;padding-left:20px;text-indent:-20px}.reportSub{margin:1px 0 1px 22px}.reportSummary{margin:3px 0 7px 26px;white-space:pre-wrap;text-align:justify}.reportAction{margin:2px 0 2px 22px}.reportNote{font-size:12px;color:#6b7280;margin-top:8px}.reportFileName{font-size:12px;color:#6b7280;margin-left:auto;align-self:center}@media(max-width:650px){.reportPaper{padding:44px 18px 28px;font-size:12px;line-height:1.45}.reportSecurity{right:18px;top:18px;font-size:11px;padding:3px 8px}.reportDocTitle{font-size:21px;margin-top:2px}.reportPaper th,.reportPaper td{padding:4px 4px}.reportPaper th{width:54px}.reportMeta th{width:54px}.reportSec{font-size:14px}.reportLine{padding-left:17px;text-indent:-17px}.reportSummary{margin-left:20px}.exportBar .btn{flex:1 1 30%}}'''
+          if '.reportPaper{' not in s:
+            s=s.replace('</style>',css+'</style>',1)
+
+          old_btn='<button class="btn red" onclick="render()">보고서 미리보기</button>'
+          new_btn='<button class="btn red" onclick="render()">보고서 미리보기</button> <button class="btn blue" onclick="showReportOutput()">🖨 보고서 출력하기</button>'
+          if old_btn not in s:
+            raise SystemExit('preview button marker not found')
+          s=s.replace(old_btn,new_btn,1)
+
+          report_html='''<div id="reportOutputCard" class="card reportWrap"><div class="exportBar"><button type="button" class="btn red" onclick="saveReportJpg()">JPG 저장</button><button type="button" class="btn green" onclick="saveReportHwpx()">한글(HWPX) 저장</button><button type="button" class="btn gray" onclick="hideReportOutput()">닫기</button><span id="reportExportStatus" class="reportFileName"></span></div><div id="reportPaper" class="reportPaper"></div><div class="reportNote">※ 2025년 완주소방서 화재 등 사고상황보고서의 배치와 항목 구성을 기준으로 화면 출력 형식을 맞췄습니다. 한글 저장은 편집 가능한 한/글 표준 문서(HWPX) 형식입니다.</div></div>'''
+          marker='</main><script>'
+          if 'id="reportOutputCard"' not in s:
+            if marker not in s: raise SystemExit('main/script marker not found')
+            s=s.replace(marker,report_html+marker,1)
+
+          export_js=r'''function hEsc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function reportNow(){let d=new Date(),w=['일','월','화','수','목','금','토'];return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.(${w[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}function incidentDateText(){let x=v('date');if(!x)return '';let d=new Date(x+'T00:00:00'),w=['일','월','화','수','목','금','토'];return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.(${w[d.getDay()]})`}function reportTitleText(){return `완주군 ${v('town')} ${v('ri')} ${v('target')} 화재`.replace(/\s+/g,' ').trim()}function damageReportHtml(){let total=n('real')+n('move');if(v('propertyDamage')!=='피해 있음')return '<div class="reportLine">나. 재산피해: 없음</div>';let x=`<div class="reportLine">나. 재산피해: ${total.toLocaleString('ko-KR')}천원(부동산 ${n('real').toLocaleString('ko-KR')}천원, 동산 ${n('move').toLocaleString('ko-KR')}천원)</div>`;if(v('realDetail'))x+=`<div class="reportSub">○ 부동산: ${hEsc(v('realDetail'))}</div>`;if(v('moveDetail'))x+=`<div class="reportSub">○ 동 산: ${hEsc(v('moveDetail'))}</div>`;if(v('damageMemo'))x+=`<div class="reportSub">○ 기타: ${hEsc(v('damageMemo'))}</div>`;return x}function actionReportHtml(){let lines=v('actions').split('\n').filter(Boolean);return lines.length?lines.map(x=>`<div class="reportAction">○ ${hEsc(x)}</div>`).join(''):'<div class="reportAction">○ 조치사항 입력 없음</div>'}function buildReportPaper(){updateDamageCalc();syncActionsText();let people=n('pFire')+n('pPolice')+n('pAgency')+n('pVolunteer')+n('pOtherN');let human=v('human')==='있음'?(v('humanDetail')||'있음'):'없음';let structure=v('structure')||'-';let addr=address().replace(/\s+/g,' ').trim();let ins=v('insurance')+(v('insuranceDetail')?' - '+v('insuranceDetail'):'');let special=v('special');$('reportPaper').innerHTML=`<div class="reportSecurity">대외유출주의</div><div class="reportDocTitle">화재 등 사고상황보고서</div><table class="reportTop"><tr><td><b>수신:</b> 전북특별도지사<br><b>참조:</b> 119종합상황실장<br><b>발신:</b> 완주소방서장</td><td><b>보고일시:</b> ${hEsc(reportNow())}<br><b>작성자:</b> ${hEsc(v('writer')||'-')}<br><b>보고책임자:</b> ${hEsc(v('boss')||'-')}</td></tr></table><table class="reportMeta"><tr><th>발신지</th><td>완주소방서 현장대응단</td><th>관할소방서</th><td>완주소방서</td><th>접수시간</th><td>${hEsc(v('recv')||'-')}</td></tr><tr><th>제목</th><td colspan="5" class="wide">${hEsc(reportTitleText())}</td></tr></table><div class="reportBody"><div class="reportSec">1. 발생개요</div><div class="reportLine">가. 일&nbsp;&nbsp;&nbsp;&nbsp;시: ${hEsc(incidentDateText())} ${hEsc(v('recv'))}(접수) ~ ${hEsc(v('end'))}(${hEsc(v('status'))})</div><div class="reportSub">※ 선착대 ${hEsc(v('first')||'-')} ${hEsc(v('firstKm')||'-')}km, 본서 ${hEsc(v('hqKm')||'-')}km</div><div class="reportLine">나. 장&nbsp;&nbsp;&nbsp;&nbsp;소: ${hEsc(addr||'-')}</div><div class="reportLine">다. 대&nbsp;&nbsp;&nbsp;&nbsp;상: ${hEsc(v('target')||'-')}</div><div class="reportSub">※ ${hEsc(structure)}</div><div class="reportLine">라. 원&nbsp;&nbsp;&nbsp;&nbsp;인: ${hEsc(v('cause')||'조사 중')}</div><div class="reportLine">마. 사고개요</div><div class="reportSummary">○ ${hEsc(v('summary')||'사고개요 입력 없음').replace(/\n/g,'<br>')}</div><div class="reportSec">2. 피해상황</div><div class="reportLine">가. 인명피해: ${hEsc(human)}</div>${damageReportHtml()}<div class="reportSec">3. 동원상황</div><div class="reportLine">가. 인원: ${people}명(소방 ${n('pFire')}, 경찰 ${n('pPolice')}, 유관기관 ${n('pAgency')}, 의소대 ${n('pVolunteer')}${n('pOtherN')?`, 기타 ${n('pOtherN')}`:''})</div><div class="reportLine">나. 장비: ${n('vehicleN')}대(${hEsc(v('vehicles')||'-')})</div><div class="reportSec">4. 조치사항</div>${actionReportHtml()}<div class="reportSec">5. 그 밖의 사항</div><div class="reportAction">○ 보험: ${hEsc(ins||'미가입')}</div>${special?`<div class="reportAction">○ 특이사항: ${hEsc(special).replace(/\n/g,'<br>')}</div>`:''}</div>`;return $('reportPaper')}function showReportOutput(){buildReportPaper();$('reportOutputCard').classList.add('show');$('reportExportStatus').textContent='2025년 양식 기준 미리보기';$('reportOutputCard').scrollIntoView({behavior:'smooth',block:'start'})}function hideReportOutput(){$('reportOutputCard').classList.remove('show')}function reportFileBase(){let parts=['화재상황보고서',v('date'),v('town'),v('ri')].filter(Boolean);return parts.join('_').replace(/[\\/:*?"<>|\s]+/g,'_')}function downloadBlob(blob,name){let u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500)}async function saveReportJpg(){try{buildReportPaper();if(!window.html2canvas)throw Error('JPG 저장 모듈을 불러오지 못했습니다. 인터넷 연결 후 다시 시도하세요.');$('reportExportStatus').textContent='JPG 만드는 중...';let canvas=await html2canvas($('reportPaper'),{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false});let blob=await new Promise((ok,fail)=>canvas.toBlob(b=>b?ok(b):fail(Error('JPG 변환 실패')),'image/jpeg',0.95));downloadBlob(blob,reportFileBase()+'.jpg');$('reportExportStatus').textContent='✓ JPG 저장 완료'}catch(e){$('reportExportStatus').textContent='JPG 저장 실패: '+e.message}}function xmlEsc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]))}function reportPlainLines(){updateDamageCalc();syncActionsText();let total=n('real')+n('move'),people=n('pFire')+n('pPolice')+n('pAgency')+n('pVolunteer')+n('pOtherN'),lines=[];lines.push('화재 등 사고상황보고서','',`수신: 전북특별도지사`,`참조: 119종합상황실장`,`발신: 완주소방서장`,`보고일시: ${reportNow()}`,`작성자: ${v('writer')||'-'}`,`보고책임자: ${v('boss')||'-'}`,`발신지: 완주소방서 현장대응단 / 관할소방서: 완주소방서 / 접수시간: ${v('recv')||'-'}`,`제목: ${reportTitleText()}`,'','1. 발생개요',`가. 일    시: ${incidentDateText()} ${v('recv')}(접수) ~ ${v('end')}(${v('status')})`,`※ 선착대 ${v('first')||'-'} ${v('firstKm')||'-'}km, 본서 ${v('hqKm')||'-'}km`,`나. 장    소: ${address().replace(/\s+/g,' ').trim()||'-'}`,`다. 대    상: ${v('target')||'-'}`,`※ ${v('structure')||'-'}`,`라. 원    인: ${v('cause')||'조사 중'}`,'마. 사고개요');(v('summary')||'사고개요 입력 없음').split('\n').forEach((x,i)=>lines.push((i?'  ':'○ ')+x));lines.push('','2. 피해상황',`가. 인명피해: ${v('human')==='있음'?(v('humanDetail')||'있음'):'없음'}`);if(v('propertyDamage')==='피해 있음'){lines.push(`나. 재산피해: ${total.toLocaleString('ko-KR')}천원(부동산 ${n('real').toLocaleString('ko-KR')}천원, 동산 ${n('move').toLocaleString('ko-KR')}천원)`);if(v('realDetail'))lines.push('○ 부동산: '+v('realDetail'));if(v('moveDetail'))lines.push('○ 동 산: '+v('moveDetail'));if(v('damageMemo'))lines.push('○ 기타: '+v('damageMemo'))}else lines.push('나. 재산피해: 없음');lines.push('','3. 동원상황',`가. 인원: ${people}명(소방 ${n('pFire')}, 경찰 ${n('pPolice')}, 유관기관 ${n('pAgency')}, 의소대 ${n('pVolunteer')}${n('pOtherN')?`, 기타 ${n('pOtherN')}`:''})`,`나. 장비: ${n('vehicleN')}대(${v('vehicles')||'-'})`,'','4. 조치사항');let acts=v('actions').split('\n').filter(Boolean);if(acts.length)acts.forEach(x=>lines.push('○ '+x));else lines.push('○ 조치사항 입력 없음');lines.push('','5. 그 밖의 사항',`○ 보험: ${v('insurance')}${v('insuranceDetail')?' - '+v('insuranceDetail'):''}`);if(v('special'))v('special').split('\n').forEach((x,i)=>lines.push((i?'  ':'○ 특이사항: ')+x));return lines}function hwpxParagraph(text,id,charPr=0,paraPr=0){if(text==='')return `<hp:p id="${id}" paraPrIDRef="${paraPr}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="${charPr}"><hp:t/></hp:run></hp:p>`;return `<hp:p id="${id}" paraPrIDRef="${paraPr}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="${charPr}"><hp:t>${xmlEsc(text)}</hp:t></hp:run></hp:p>`}function makeHwpxBody(lines){let id=2000000000,out='';lines.forEach((line,i)=>{let charPr=0,paraPr=0;if(i===0){charPr=7;paraPr=20}else if(/^\d+\. /.test(line)){charPr=8}out+=hwpxParagraph(line,id++,charPr,paraPr)});return out}async function saveReportHwpx(){try{buildReportPaper();if(!window.JSZip)throw Error('한글 저장 모듈을 불러오지 못했습니다. 인터넷 연결 후 다시 시도하세요.');$('reportExportStatus').textContent='한글(HWPX) 만드는 중...';let r=await fetch('report-template.hwpx?v=20260903',{cache:'no-store'});if(!r.ok)throw Error('HWPX 기본양식을 불러오지 못했습니다.');let zip=await JSZip.loadAsync(await r.arrayBuffer()),f=zip.file('Contents/section0.xml');if(!f)throw Error('HWPX 본문 템플릿이 없습니다.');let base=await f.async('string'),end=base.indexOf('</hp:p>');if(end<0)throw Error('HWPX 구역 정보를 확인할 수 없습니다.');let prefix=base.slice(0,end+'</hp:p>'.length),lines=reportPlainLines(),section=prefix+'\n'+makeHwpxBody(lines)+'\n</hs:sec>';zip.file('Contents/section0.xml',section);zip.file('Preview/PrvText.txt',lines.join('\n'));zip.file('mimetype','application/hwp+zip',{compression:'STORE'});let hpf=zip.file('Contents/content.hpf');if(hpf){let txt=await hpf.async('string');txt=txt.replace(/<dc:title>[\s\S]*?<\/dc:title>/,`<dc:title>${xmlEsc(reportTitleText())}</dc:title>`);zip.file('Contents/content.hpf',txt)}let blob=await zip.generateAsync({type:'blob',mimeType:'application/hwp+zip',compression:'DEFLATE',compressionOptions:{level:6}});downloadBlob(blob,reportFileBase()+'.hwpx');$('reportExportStatus').textContent='✓ 한글(HWPX) 저장 완료'}catch(e){$('reportExportStatus').textContent='한글 저장 실패: '+e.message}}'''
+
+          marker_js='function saveLocal(show=true)'
+          if 'function saveReportHwpx()' not in s:
+            if marker_js not in s: raise SystemExit('saveLocal marker not found')
+            s=s.replace(marker_js,export_js+marker_js,1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Validate patched app
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          assert 'V2.8' in s
+          assert 'saveReportJpg' in s and 'saveReportHwpx' in s
+          assert 'reportOutputCard' in s
+          inline=s.rsplit('<script>',1)[1].split('</script></body>',1)[0]
+          Path('/tmp/app.js').write_text(inline,encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+          python - <<'PY'
+          import zipfile, xml.etree.ElementTree as ET
+          with zipfile.ZipFile('report-template.hwpx') as z:
+            assert z.infolist()[0].filename=='mimetype'
+            assert z.infolist()[0].compress_type==zipfile.ZIP_STORED
+            for f in ['Contents/header.xml','Contents/section0.xml','Contents/content.hpf','META-INF/container.xml']:
+              ET.fromstring(z.read(f))
+          print('V2.8 validation OK')
+          PY
+
+      - name: Commit V2.8
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html report-template.hwpx
+          git commit -m "V2.8 2025 양식 보고서 JPG 및 HWPX 저장" || exit 0
+          git push
