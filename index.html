@@ -3,175 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>완주소방서 화재상황보고 V1.4</title>
+<title>완주소방서 화재상황보고 V2.0</title>
 <style>
-body{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0;background:#f5f6f8;color:#111}
-header{padding:18px;background:#fff;border-bottom:1px solid #ddd}
-main{max-width:800px;margin:auto;padding:12px}
-.card{background:#fff;margin:12px 0;padding:16px;border-radius:14px}
-h1{font-size:21px;margin:0}h2{font-size:17px;margin:0 0 8px}
-label{display:block;font-size:13px;font-weight:700;margin-top:10px}
-input,select,textarea{width:100%;box-sizing:border-box;padding:11px;margin-top:4px;border:1px solid #bbb;border-radius:9px;font:inherit}
-textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{padding:12px;border:0;border-radius:10px;font-weight:700;margin-top:10px;cursor:pointer}
-.btn:disabled{opacity:.55;cursor:not-allowed}.primary{background:#b91c1c;color:#fff}.sheet{background:#166534;color:#fff}
-.lookup{background:#1d4ed8;color:#fff;width:100%}.building{background:#7c3aed;color:#fff;width:100%}
-.auto{background:#eef6ff}.hint{font-size:12px;color:#666;margin-top:5px}.preview{white-space:pre-wrap;line-height:1.7;border:1px dashed #aaa;padding:14px}.status{font-size:13px;margin-top:10px;font-weight:700}
-.resultbox{display:none;margin-top:10px;padding:12px;background:#f7f5ff;border:1px solid #ddd6fe;border-radius:10px}
-.resultbox.show{display:block}.ok{color:#166534}.warn{color:#b45309}.err{color:#b91c1c}
-.distanceBox{margin-top:10px}.distanceBox>span{display:block;font-size:13px;font-weight:700}.distanceRow{display:grid;grid-template-columns:1fr 60px 60px 60px 60px;gap:6px;align-items:end}.distanceRow input{margin-top:4px}.kmBtn{height:44px;border:1px solid #bbb;background:#fff;border-radius:9px;font-size:16px;font-weight:800;cursor:pointer}.kmBtn:active{background:#e5e7eb}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.distanceRow{grid-template-columns:1fr 56px 56px 56px 56px}}
+:root{--line:#d1d5db;--bg:#f4f6f8;--card:#fff;--accent:#b91c1c;--blue:#1d4ed8;--green:#166534;--text:#111827;--muted:#6b7280}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0;background:var(--bg);color:var(--text)}
+header{padding:18px;background:#fff;border-bottom:1px solid #ddd;position:sticky;top:0;z-index:5}main{max-width:860px;margin:auto;padding:12px}
+.card{background:var(--card);margin:12px 0;padding:16px;border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+h1{font-size:21px;margin:0}h2{font-size:18px;margin:0 0 10px}h3{font-size:14px;margin:16px 0 6px}
+label{display:block;font-size:13px;font-weight:800;margin-top:10px}input,select,textarea{width:100%;padding:11px;margin-top:4px;border:1px solid #bbb;border-radius:9px;font:inherit;background:#fff}
+textarea{min-height:90px;resize:vertical}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+.btn{padding:12px;border:0;border-radius:10px;font-weight:800;margin-top:10px;cursor:pointer}.primary{background:var(--accent);color:#fff}.sheet{background:var(--green);color:#fff}.soft{background:#eef2ff;color:#1e3a8a}.ghost{background:#f3f4f6;color:#111827}
+.choiceWrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}.choice{border:1px solid #c7cdd4;background:#fff;border-radius:10px;padding:9px 11px;font-weight:800;cursor:pointer}.choice.selected{background:#111827;color:#fff;border-color:#111827}.choice:active{transform:scale(.98)}
+.riBox{display:none;margin-top:8px;padding:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px}.riBox.show{display:block}
+.keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:8px}.key{height:46px;border:1px solid #c7cdd4;background:#fff;border-radius:10px;font-size:17px;font-weight:900;cursor:pointer}.key.wide{grid-column:span 2}.key.danger{background:#fff1f2;color:#be123c}.key.special{background:#eef2ff;color:#3730a3}
+.distanceBox{margin-top:10px}.distanceBox>span{display:block;font-size:13px;font-weight:800}.distanceRow{display:grid;grid-template-columns:1fr 58px 58px 58px 58px;gap:6px;align-items:end}.kmBtn{height:44px;border:1px solid #bbb;background:#fff;border-radius:9px;font-size:16px;font-weight:900;cursor:pointer}
+.stepRow{display:grid;grid-template-columns:1fr 54px 54px;gap:6px;align-items:end}.stepBtn{height:44px;border:1px solid #bbb;background:#fff;border-radius:9px;font-weight:900;font-size:18px;cursor:pointer}
+.readonly{background:#f8fafc}.preview{white-space:pre-wrap;line-height:1.75;border:1px dashed #aaa;padding:14px;border-radius:10px;background:#fff}.status{font-size:13px;margin-top:10px;font-weight:800}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.distanceRow{grid-template-columns:1fr 54px 54px 54px 54px}.choice{padding:10px 9px}.keypad{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
-<header><h1>🔥 완주소방서 화재상황보고 V1.4</h1><small>현장 입력 최소화 · 주소 수기입력 · 거리 빠른입력 · 건축물대장 구조 조회</small></header>
+<header><h1>🔥 완주소방서 화재상황보고 V2.0</h1><small>외부 조회 없이 · 현장 클릭 입력 중심</small></header>
 <main>
-<div class="card"><h2>기본정보</h2><div class="grid">
-<label>작성자<input id="writer"></label><label>보고책임자<input id="boss"></label><label>접수시간<input id="recv" type="time" step="1"></label>
-</div><div class="hint">수신·참조·발신·발신지는 입력하지 않고 최종 상황보고서에 고정값으로 자동 표시합니다.</div></div>
-
-<div class="card"><h2>1. 발생개요</h2><div class="grid">
-<label>발생일<input id="date" type="date"></label>
-<label>종료상태<select id="status"><option>화재완진</option><option>자체진화</option><option>화재진압 중</option></select></label>
-<label>종료시간<input id="end" type="time"></label>
-<label>읍·면<select id="town" onchange="resetBuilding()"><option value="">선택</option><option>삼례읍</option><option>봉동읍</option><option>용진읍</option><option>상관면</option><option>이서면</option><option>소양면</option><option>구이면</option><option>고산면</option><option>비봉면</option><option>운주면</option><option>화산면</option><option>동상면</option><option>경천면</option></select></label>
-<label>리<input id="ri" placeholder="예: 하리"></label>
-<label>지번<input id="jibun" placeholder="예: 1290-448 / 산 12-3"></label>
-</div>
-<label>도로명주소(수기)<input id="road" placeholder="예: 하리로 177-5 · 없으면 비워두기"></label>
-<div id="addrStatus" class="hint">읍·면, 리, 지번은 수기로 입력합니다. 도로명주소가 없으면 비워두면 지번주소로 보고서에 표시됩니다.</div>
-
-<div class="grid">
-<label>대상<input id="target"></label>
-<label>선착대<select id="first"><option value="">선택</option><option>봉동119안전센터</option><option>소양지역대</option><option>삼례119안전센터</option><option>고산119안전센터</option><option>운주지역대</option><option>화산지역대</option><option>혁신119안전센터</option><option>구이119안전센터</option><option>상관지역대</option></select></label>
-</div>
-<div class="grid">
-<div class="distanceBox"><span>선착대 거리 km</span><div class="distanceRow"><input id="firstKm" type="number" step=".1" inputmode="decimal" placeholder="직접입력"><button type="button" class="kmBtn" onclick="addKm('firstKm',-1)">-1</button><button type="button" class="kmBtn" onclick="addKm('firstKm',1)">+1</button><button type="button" class="kmBtn" onclick="addKm('firstKm',5)">+5</button><button type="button" class="kmBtn" onclick="addKm('firstKm',10)">+10</button></div></div>
-<div class="distanceBox"><span>본서 거리 km</span><div class="distanceRow"><input id="hqKm" type="number" step=".1" inputmode="decimal" placeholder="직접입력"><button type="button" class="kmBtn" onclick="addKm('hqKm',-1)">-1</button><button type="button" class="kmBtn" onclick="addKm('hqKm',1)">+1</button><button type="button" class="kmBtn" onclick="addKm('hqKm',5)">+5</button><button type="button" class="kmBtn" onclick="addKm('hqKm',10)">+10</button></div></div>
-</div>
-<div class="hint">-1·+1·+5·+10 버튼으로 빠르게 조정할 수 있습니다. 거리는 0km 아래로 내려가지 않으며 소수점은 숫자칸에서 직접 수정할 수 있습니다.</div>
-
-<button id="buildingBtn" class="btn building" onclick="lookupBuilding()">🏢 건축물대장 조회</button>
-<div id="buildingStatus" class="hint">읍·면, 리, 지번을 입력한 뒤 조회하면 건축물대장 자료를 확인할 수 있습니다.</div>
-<div id="buildingResult" class="resultbox">
-<label>조회된 건물<select id="buildingChoice" onchange="applyBuildingChoice()"></select></label>
-<div id="buildingDetail" class="hint"></div>
-</div>
-<label>구조<input id="structure" class="auto" placeholder="건축물대장 조회 결과 · 직접 수정 가능"></label>
-<div class="hint">조회 자료는 현장 확인을 보조하기 위한 값입니다. 실제 화재대상과 다르면 직접 수정해 주세요.</div>
-</div>
-
-<div class="card"><h2>2. 사고개요</h2>
-<label>현장 원문 메모<textarea id="raw" placeholder="현장에서 확인한 내용을 편하게 입력"></textarea></label>
-<button class="btn" onclick="aiNotice()">✨ ChatGPT 정리</button>
-<label>보고서 적용 문장<textarea id="summary" oninput="syncCause()"></textarea></label>
-<label>원인 <span class="hint">(사고개요 마지막 내용에서 자동 반영)</span><input id="cause" class="auto" value="조사 중"></label>
-</div>
-
-<div class="card"><h2>3. 피해상황</h2><div class="grid">
-<label>인명피해<select id="human"><option>피해 없음</option><option>있음</option></select></label><label>인명피해 상세<input id="humanDetail"></label>
-<label>부동산 피해(천원)<input id="real" type="number" value="0"></label><label>동산 피해(천원)<input id="move" type="number" value="0"></label>
-</div><label>부동산 피해내용<input id="realDetail"></label><label>동산 피해내용<input id="moveDetail"></label></div>
-
-<div class="card"><h2>4. 동원상황</h2><div class="grid">
-<label>소방 명<input id="pFire" type="number" value="0"></label><label>경찰 명<input id="pPolice" type="number" value="0"></label>
-<label>유관기관 명<input id="pAgency" type="number" value="0"></label><label>의소대 명<input id="pVolunteer" type="number" value="0"></label>
-<label>기타인원 합계<input id="pOtherN" type="number" value="0"></label><label>기타인원 내용<input id="pOther" placeholder="한전 2, 기타 1"></label>
-<label>장비 총계 대<input id="vehicleN" type="number" value="0"></label>
-</div><label>장비 세부<input id="vehicles" placeholder="지휘 1, 펌프 5, 물탱크 5, 구급 2 ..."></label></div>
-
+<div class="card"><h2>기본정보</h2>
+<h3>작성자</h3><input id="writer" class="readonly" readonly placeholder="화재조사관을 클릭하세요"><div class="choiceWrap" id="writerChoices"></div>
+<h3>보고책임자</h3><input id="boss" class="readonly" readonly placeholder="보고책임자를 클릭하세요"><div class="choiceWrap" id="bossChoices"></div>
+<div class="grid"><label>접수시간<input id="recv" type="time" step="1"></label><label>발생일<input id="date" type="date"></label></div>
+<div class="hint">수신·참조·발신·발신지는 최종 보고서에 고정값으로 표시합니다.</div></div>
+<div class="card"><h2>1. 발생개요</h2>
+<div class="grid"><label>종료상태<select id="status"><option>화재완진</option><option>자체진화</option><option>화재진압 중</option></select></label><label>종료시간<input id="end" type="time"></label></div>
+<h3>주소</h3>
+<label>읍·면<select id="town" onchange="updateRiButtons()"><option value="">선택</option><option>삼례읍</option><option>봉동읍</option><option>용진읍</option><option>상관면</option><option>이서면</option><option>소양면</option><option>구이면</option><option>고산면</option><option>비봉면</option><option>운주면</option><option>화산면</option><option>동상면</option><option>경천면</option></select></label>
+<label>리<input id="ri" class="readonly" readonly placeholder="읍·면 선택 후 아래에서 리를 클릭"></label><div id="riBox" class="riBox"><div id="riChoices" class="choiceWrap"></div></div>
+<label>지번<input id="jibun" class="readonly" readonly placeholder="아래 숫자판으로 입력"></label>
+<div class="keypad"><button class="key" onclick="jibunKey('1')">1</button><button class="key" onclick="jibunKey('2')">2</button><button class="key" onclick="jibunKey('3')">3</button><button class="key special" onclick="jibunKey('산 ')">산</button><button class="key" onclick="jibunKey('4')">4</button><button class="key" onclick="jibunKey('5')">5</button><button class="key" onclick="jibunKey('6')">6</button><button class="key special" onclick="jibunKey('-')">-</button><button class="key" onclick="jibunKey('7')">7</button><button class="key" onclick="jibunKey('8')">8</button><button class="key" onclick="jibunKey('9')">9</button><button class="key danger" onclick="jibunBack()">←</button><button class="key wide" onclick="jibunKey('0')">0</button><button class="key wide danger" onclick="jibunClear()">전체삭제</button></div>
+<label>도로명주소(선택)<input id="road" placeholder="알고 있으면 직접 입력 · 없으면 비워두기"></label><div class="hint">주소 자동조회·도로명 변환·건축물대장 API 코드는 사용하지 않습니다.</div>
+<div class="grid"><label>대상<input id="target" placeholder="예: 단독주택 / 공장 / 창고"></label><label>선착대<select id="first"><option value="">선택</option><option>봉동119안전센터</option><option>소양지역대</option><option>삼례119안전센터</option><option>고산119안전센터</option><option>운주지역대</option><option>화산지역대</option><option>혁신119안전센터</option><option>구이119안전센터</option><option>상관지역대</option></select></label></div>
+<div class="grid"><div class="distanceBox"><span>선착대 거리 km</span><div class="distanceRow"><input id="firstKm" type="number" step=".1" inputmode="decimal"><button class="kmBtn" onclick="addKm('firstKm',-1)">-1</button><button class="kmBtn" onclick="addKm('firstKm',1)">+1</button><button class="kmBtn" onclick="addKm('firstKm',5)">+5</button><button class="kmBtn" onclick="addKm('firstKm',10)">+10</button></div></div><div class="distanceBox"><span>본서 거리 km</span><div class="distanceRow"><input id="hqKm" type="number" step=".1" inputmode="decimal"><button class="kmBtn" onclick="addKm('hqKm',-1)">-1</button><button class="kmBtn" onclick="addKm('hqKm',1)">+1</button><button class="kmBtn" onclick="addKm('hqKm',5)">+5</button><button class="kmBtn" onclick="addKm('hqKm',10)">+10</button></div></div></div>
+<h3>건축물 구조</h3><input id="structureType" class="readonly" readonly placeholder="구조를 클릭하세요"><div class="choiceWrap" id="structureChoices"></div>
+<h3>지붕</h3><input id="roofType" class="readonly" readonly placeholder="지붕을 클릭하세요"><div class="choiceWrap" id="roofChoices"></div>
+<div class="grid"><div><span style="display:block;font-size:13px;font-weight:800;margin-top:10px">지상층수</span><div class="stepRow"><input id="groundFloors" type="number" value="1" min="0"><button class="stepBtn" onclick="stepNum('groundFloors',-1)">−</button><button class="stepBtn" onclick="stepNum('groundFloors',1)">＋</button></div></div><div><span style="display:block;font-size:13px;font-weight:800;margin-top:10px">지하층수</span><div class="stepRow"><input id="underFloors" type="number" value="0" min="0"><button class="stepBtn" onclick="stepNum('underFloors',-1)">−</button><button class="stepBtn" onclick="stepNum('underFloors',1)">＋</button></div></div></div>
+<label>연면적 ㎡<input id="area" type="number" step=".1" placeholder="예: 60"></label><label>보고서용 구조 문장<input id="structure" placeholder="선택값을 바탕으로 자동작성되며 직접 수정 가능"></label><button class="btn soft" onclick="composeStructure()">구조 문장 다시 만들기</button></div>
+<div class="card"><h2>2. 사고개요</h2><label>사고개요<textarea id="summary" oninput="syncCause()" placeholder="현장에서 확인한 사실을 직접 입력"></textarea></label><label>원인<input id="cause" value="조사 중" placeholder="예: 부주의 / 전기적 요인 / 조사 중"></label><div class="hint">외부 AI 연동 없이 직접 입력하며, 원인은 필요하면 수정할 수 있습니다.</div></div>
+<div class="card"><h2>3. 피해상황</h2><div class="grid"><label>인명피해<select id="human"><option>피해 없음</option><option>있음</option></select></label><label>인명피해 상세<input id="humanDetail"></label><label>부동산 피해(천원)<input id="real" type="number" value="0"></label><label>동산 피해(천원)<input id="move" type="number" value="0"></label></div><label>부동산 피해내용<input id="realDetail"></label><label>동산 피해내용<input id="moveDetail"></label></div>
+<div class="card"><h2>4. 동원상황</h2><div class="grid"><label>소방 명<input id="pFire" type="number" value="0"></label><label>경찰 명<input id="pPolice" type="number" value="0"></label><label>유관기관 명<input id="pAgency" type="number" value="0"></label><label>의소대 명<input id="pVolunteer" type="number" value="0"></label><label>기타인원 합계<input id="pOtherN" type="number" value="0"></label><label>기타인원 내용<input id="pOther" placeholder="한전 2, 기타 1"></label><label>장비 총계 대<input id="vehicleN" type="number" value="0"></label></div><label>장비 세부<input id="vehicles" placeholder="지휘 1, 펌프 5, 물탱크 5, 구급 2 ..."></label></div>
 <div class="card"><h2>5. 조치사항</h2><textarea id="actions" placeholder="12:35:59 신고접수 및 출동지령&#10;12:42 선착대 현장도착&#10;12:52 초진&#10;13:07 완진"></textarea></div>
-
 <div class="card"><h2>6. 그 밖의 사항</h2><label>보험<select id="insurance"><option>미가입</option><option>가입</option></select></label><label>보험 상세<input id="insuranceDetail"></label><label>특이사항<textarea id="special"></textarea></label></div>
-
-<div class="card"><button class="btn" onclick="saveLocal()">기기 임시저장</button> <button id="sheetBtn" class="btn sheet" onclick="saveSheet()">☁ Google Sheet 저장</button> <button class="btn primary" onclick="render()">보고서 미리보기</button><div id="saveStatus" class="status"></div></div>
-<div class="card"><h2>보고서 미리보기</h2><div id="preview" class="preview">입력 후 보고서 미리보기를 누르세요.</div></div>
+<div class="card"><button class="btn ghost" onclick="saveLocal()">기기 임시저장</button> <button id="sheetBtn" class="btn sheet" onclick="saveSheet()">☁ Google Sheet 저장</button> <button class="btn primary" onclick="render()">보고서 미리보기</button><div id="saveStatus" class="status"></div></div><div class="card"><h2>보고서 미리보기</h2><div id="preview" class="preview">입력 후 보고서 미리보기를 누르세요.</div></div>
 </main>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwuMePzT5oDabWeh216B0szP87G29MLcZSad_cU2iGnYSStEtob7UVs4SecWLr8Y8eZWw/exec';
-const $=x=>document.getElementById(x),v=x=>$(x)?.value||'',n=x=>Number(v(x)||0);
-let BUILDINGS=[];
+const API_URL='https://script.google.com/macros/s/AKfycbwuMePzT5oDabWeh216B0szP87G29MLcZSad_cU2iGnYSStEtob7UVs4SecWLr8Y8eZWw/exec';const $=id=>document.getElementById(id),v=id=>$(id)?.value||'',n=id=>Number(v(id)||0);
+const WRITERS=['소방위 성상옥','소방위 박기환','소방위 이원재','소방장 소범준','소방교 오경수','소방장 곽보국'];const BOSSES=['소방령 조계선','소방경 유성훈','소방경 이종삼','소방경 김종래'];const STRUCTURES=['철근콘크리트조','철골조','경량철골조','조립식패널조','시멘트벽돌조','시멘트블록조','목조','황토벽돌조','컨테이너','기타'];const ROOFS=['슬라브','칼라강판','샌드위치패널','기와','스레이트','징크','기타'];
+const RI={'삼례읍':['구와리','삼례리','석전리','수계리','신금리','신탁리','어전리','하리','해전리','후정리'],'봉동읍':['고천리','구만리','구미리','구암리','낙평리','둔산리','성덕리','신성리','용암리','율소리','은하리','장구리','장기리','제내리'],'용진읍':['간중리','구억리','상삼리','상운리','신지리','용흥리','운곡리'],'상관면':['마치리','신리','용암리','의암리','죽림리'],'이서면':['갈산리','금계리','금평리','남계리','반교리','상개리','용서리','은교리','이문리','이성리'],'소양면':['대흥리','명덕리','신교리','신원리','신촌리','죽절리','해월리','화심리','황운리'],'구이면':['계곡리','광곡리','덕천리','두현리','백여리','안덕리','원기리','평촌리','항가리'],'고산면':['남봉리','삼기리','서봉리','성재리','소향리','양야리','어우리','오산리','율곡리','읍내리','화정리'],'비봉면':['내월리','대치리','백도리','봉산리','소농리','수선리','이전리'],'운주면':['고당리','구제리','금당리','산북리','완창리','장선리'],'화산면':['성북리','승치리','와룡리','우월리','운곡리','운산리','운제리','종리','춘산리','화월리','화평리'],'동상면':['대아리','사봉리','수만리','신월리'],'경천면':['가천리','경천리','용복리']};
 if(!$('date').value)$('date').value=new Date().toISOString().slice(0,10);
-
-function addKm(id,amount){
-  const el=$(id);if(!el)return;
-  const cur=Number(el.value||0);
-  const next=Math.max(0,Math.round((cur+amount)*10)/10);
-  el.value=String(next);
-}
-
-function resetBuilding(){
-  BUILDINGS=[];
-  $('buildingResult').classList.remove('show');
-  $('buildingStatus').className='hint';
-  $('buildingStatus').textContent='읍·면, 리, 지번을 입력한 뒤 건축물대장을 조회해 주세요.';
-}
-
-async function lookupBuilding(){
-  if(!v('town')||!v('ri')||!v('jibun')){alert('읍·면, 리, 지번을 모두 입력해 주세요.');return}
-  const b=$('buildingBtn'),st=$('buildingStatus');
-  b.disabled=true;st.className='hint';st.textContent='건축물대장 조회 중...';
-  $('buildingResult').classList.remove('show');
-  try{
-    const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'lookupBuilding',town:v('town'),ri:v('ri'),jibun:v('jibun')})});
-    const data=await res.json();
-    if(!data.ok)throw new Error(data.message||'건축물대장 조회 실패');
-    BUILDINGS=Array.isArray(data.buildings)?data.buildings:[];
-    if(!BUILDINGS.length)throw new Error('조회된 건축물이 없습니다.');
-    const sel=$('buildingChoice');sel.innerHTML='';
-    BUILDINGS.forEach((x,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=buildingLabel(x,i);sel.appendChild(o)});
-    $('buildingResult').classList.add('show');
-    sel.value='0';applyBuildingChoice();
-    st.className='hint ok';st.textContent=`✓ 건축물대장 조회 완료 · ${BUILDINGS.length}건${BUILDINGS.length>1?' · 화재대상 건물을 선택해 주세요.':''}`;
-  }catch(e){
-    BUILDINGS=[];$('buildingResult').classList.remove('show');st.className='hint err';st.textContent='조회 실패: '+e.message;
-  }finally{b.disabled=false}
-}
-
-function buildingLabel(x,i){
-  const name=[x.buildingName,x.dongName].filter(Boolean).join(' ')||`${i+1}번 건물`;
-  const use=x.mainUse?` · ${x.mainUse}`:'';
-  const area=x.totalArea?` · ${Number(x.totalArea).toLocaleString('ko-KR')}㎡`:'';
-  return name+use+area;
-}
-
-function applyBuildingChoice(){
-  const x=BUILDINGS[Number(v('buildingChoice'))];if(!x)return;
-  $('structure').value=x.reportText||'';
-  const parts=[];
-  if(x.address)parts.push(x.address);
-  if(x.structure)parts.push('구조 '+x.structure);
-  if(x.roof)parts.push('지붕 '+x.roof);
-  if(x.undergroundFloors)parts.push('지하 '+x.undergroundFloors+'층');
-  if(x.groundFloors)parts.push('지상 '+x.groundFloors+'층');
-  if(x.totalArea)parts.push('연면적 '+Number(x.totalArea).toLocaleString('ko-KR')+'㎡');
-  if(x.mainUse)parts.push('용도 '+x.mainUse);
-  $('buildingDetail').textContent=parts.join(' · ');
-}
-
-function syncCause(){
-  const s=v('summary').trim();if(!s)return;
-  const parts=s.split(/[.。\n]/).map(x=>x.trim()).filter(Boolean),last=parts[parts.length-1]||'';
-  const m=last.match(/(전기적[^,.;\n]*|기계적[^,.;\n]*|부주의[^,.;\n]*|화학적[^,.;\n]*|자연적[^,.;\n]*|방화[^,.;\n]*|미상|조사\s*중)/);
-  if(m)$('cause').value=m[1].replace(/으로\s*추정됨|으로\s*추정|요인에\s*의해.*$/,'').trim();
-}
-function aiNotice(){alert('ChatGPT 정리 기능은 API 키를 GitHub에 노출하지 않고 Apps Script 서버에서 처리하도록 연결할 예정입니다.')}
-function address(){return v('road')?`${v('road')}(${v('ri')} ${v('jibun')})`:`완주군 ${v('town')} ${v('ri')} ${v('jibun')}`}
-function timeline(){return v('actions').split('\n').filter(Boolean).map(line=>{const m=line.trim().match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s*(.*)$/);return m?{time:m[1],text:m[2]}:{time:'',text:line.trim()}})}
-function collect(){return{reportId:localStorage.getItem('wanjuReportId')||'',status:'작성중',date:v('date'),recv:v('recv'),end:v('end'),endStatus:v('status'),writer:v('writer'),boss:v('boss'),town:v('town'),ri:v('ri'),jibun:v('jibun'),road:v('road'),first:v('first'),firstKm:v('firstKm'),hqKm:v('hqKm'),target:v('target'),titleTarget:v('target'),structure:v('structure'),cause:v('cause'),raw:v('raw'),summary:v('summary'),human:v('human'),humanDetail:v('humanDetail'),real:n('real'),move:n('move'),realDetail:v('realDetail'),moveDetail:v('moveDetail'),pFire:n('pFire'),pPolice:n('pPolice'),pAgency:n('pAgency'),pVolunteer:n('pVolunteer'),pOtherN:n('pOtherN'),pOther:v('pOther'),vehicleN:n('vehicleN'),vehicles:v('vehicles'),timeline:timeline(),insurance:v('insurance'),insuranceDetail:v('insuranceDetail'),special:v('special'),finalReportTime:''}}
-
-async function saveSheet(){
-  const b=$('sheetBtn'),s=$('saveStatus');b.disabled=true;s.textContent='Google Sheet 저장 중...';
-  try{const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'saveReport',report:collect()})});const data=await res.json();if(!data.ok)throw new Error(data.message||'저장 실패');localStorage.setItem('wanjuReportId',data.reportId);saveLocal(false);s.textContent=`✓ 저장 완료 · ${data.reportId} · ${data.savedAt||''}`}catch(e){s.textContent='저장 실패: '+e.message}finally{b.disabled=false}
-}
-
-function render(){
-  syncCause();const total=n('real')+n('move'),people=n('pFire')+n('pPolice')+n('pAgency')+n('pVolunteer')+n('pOtherN');
-  $('preview').textContent=`완주군 ${v('town')} ${v('ri')} ${v('target')} 화재\n\n수신: 전북특별도지사 / 참조: 119종합상황실장\n발신: 완주소방서장 / 발신지: 완주소방서 현장대응단\n작성자: ${v('writer')} / 보고책임자: ${v('boss')} / 접수시간: ${v('recv')}\n\n1. 발생개요\n 가. 일시: ${v('date')} ${v('recv')}(접수) ~ ${v('end')}(${v('status')})\n   ※ 선착대 ${v('first')} ${v('firstKm')}km, 본서 ${v('hqKm')}km\n 나. 장소: ${address()}\n 다. 구조: ${v('structure')}\n 라. 대상: ${v('target')}\n 마. 원인: ${v('cause')}\n 바. 사고개요: ${v('summary')}\n\n2. 피해상황\n 가. 인명피해: ${v('human')} ${v('humanDetail')}\n 나. 재산피해: ${total.toLocaleString()}천원(부동산 ${n('real').toLocaleString()}천원, 동산 ${n('move').toLocaleString()}천원)\n   ○ 부동산: ${v('realDetail')||'해당없음'}\n   ○ 동산: ${v('moveDetail')||'해당없음'}\n\n3. 동원상황\n 가. 인원: ${people}명(소방 ${n('pFire')}, 경찰 ${n('pPolice')}, 유관기관 ${n('pAgency')}, 의소대 ${n('pVolunteer')}${v('pOther')?', '+v('pOther'):''})\n 나. 장비: ${n('vehicleN')}대(${v('vehicles')})\n\n4. 조치사항\n${v('actions')}\n\n5. 그 밖의 사항\n ○ 보험가입: ${v('insurance')}${v('insuranceDetail')?' - '+v('insuranceDetail'):''}\n ○ 특이사항: ${v('special')||'없음'}`;
-}
-function saveLocal(show=true){const d={};document.querySelectorAll('[id]').forEach(e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.tagName))d[e.id]=e.value});localStorage.setItem('wanjuFireReportV1',JSON.stringify(d));if(show)alert('현재 기기에 임시저장했습니다.')}
-function restoreLocal(){const ss=localStorage.getItem('wanjuFireReportV1');if(!ss)return;try{const d=JSON.parse(ss);Object.entries(d).forEach(([k,x])=>{if($(k))$(k).value=x});resetBuilding();}catch(e){resetBuilding()}}
-restoreLocal();
+function makeChoices(containerId,items,targetId,onSelect){const box=$(containerId);box.innerHTML='';items.forEach(item=>{const b=document.createElement('button');b.type='button';b.className='choice';b.textContent=item;b.dataset.value=item;b.onclick=()=>{selectChoice(containerId,targetId,item);if(onSelect)onSelect(item)};box.appendChild(b)})}
+function selectChoice(containerId,targetId,value){$(targetId).value=value;document.querySelectorAll('#'+containerId+' .choice').forEach(b=>b.classList.toggle('selected',b.dataset.value===value))}
+function updateRiButtons(){const town=v('town'),box=$('riBox'),choices=$('riChoices');$('ri').value='';choices.innerHTML='';if(!town){box.classList.remove('show');return}(RI[town]||[]).forEach(item=>{const b=document.createElement('button');b.type='button';b.className='choice';b.textContent=item;b.dataset.value=item;b.onclick=()=>selectChoice('riChoices','ri',item);choices.appendChild(b)});box.classList.add('show')}
+function jibunKey(x){const el=$('jibun');if(x==='산 '){if(!el.value)el.value='산 ';return}if(x==='-'&&(!el.value||el.value.endsWith('-')||el.value.endsWith(' ')))return;el.value+=x}function jibunBack(){const el=$('jibun');if(el.value==='산 '){el.value='';return}el.value=el.value.slice(0,-1)}function jibunClear(){$('jibun').value=''}
+function addKm(id,amount){const el=$(id);const cur=Number(el.value||0);el.value=String(Math.max(0,Math.round((cur+amount)*10)/10))}function stepNum(id,amount){const el=$(id);el.value=String(Math.max(0,Number(el.value||0)+amount));composeStructure()}
+function composeStructure(){const parts=[];if(v('structureType'))parts.push(v('structureType'));if(v('roofType'))parts.push(v('roofType')+' 지붕');const floor=[];if(n('underFloors')>0)floor.push('지하 '+n('underFloors')+'층');if(n('groundFloors')>0)floor.push('지상 '+n('groundFloors')+'층');if(floor.length)parts.push(floor.join(' / '));if(n('area')>0)parts.push('연면적 '+n('area').toLocaleString('ko-KR')+'㎡');$('structure').value=parts.join(', ')}
+function syncCause(){const s=v('summary').trim();if(!s)return;const parts=s.split(/[.。\n]/).map(x=>x.trim()).filter(Boolean),last=parts.at(-1)||'';const m=last.match(/(전기적[^,.;\n]*|기계적[^,.;\n]*|부주의[^,.;\n]*|화학적[^,.;\n]*|자연적[^,.;\n]*|방화[^,.;\n]*|미상|조사\s*중)/);if(m)$('cause').value=m[1].replace(/으로\s*추정됨|으로\s*추정|요인에\s*의해.*$/,'').trim()}
+function address(){return v('road')?`${v('road')}(${v('ri')} ${v('jibun')})`:`완주군 ${v('town')} ${v('ri')} ${v('jibun')}`}function timeline(){return v('actions').split('\n').filter(Boolean).map(line=>{const m=line.trim().match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s*(.*)$/);return m?{time:m[1],text:m[2]}:{time:'',text:line.trim()}})}
+function collect(){return{reportId:localStorage.getItem('wanjuReportId')||'',status:'작성중',date:v('date'),recv:v('recv'),end:v('end'),endStatus:v('status'),writer:v('writer'),boss:v('boss'),town:v('town'),ri:v('ri'),jibun:v('jibun'),road:v('road'),first:v('first'),firstKm:v('firstKm'),hqKm:v('hqKm'),target:v('target'),titleTarget:v('target'),structure:v('structure'),cause:v('cause'),raw:'',summary:v('summary'),human:v('human'),humanDetail:v('humanDetail'),real:n('real'),move:n('move'),realDetail:v('realDetail'),moveDetail:v('moveDetail'),pFire:n('pFire'),pPolice:n('pPolice'),pAgency:n('pAgency'),pVolunteer:n('pVolunteer'),pOtherN:n('pOtherN'),pOther:v('pOther'),vehicleN:n('vehicleN'),vehicles:v('vehicles'),timeline:timeline(),insurance:v('insurance'),insuranceDetail:v('insuranceDetail'),special:v('special'),finalReportTime:''}}
+async function saveSheet(){const b=$('sheetBtn'),s=$('saveStatus');b.disabled=true;s.textContent='Google Sheet 저장 중...';try{const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'saveReport',report:collect()})});const data=await res.json();if(!data.ok)throw new Error(data.message||'저장 실패');localStorage.setItem('wanjuReportId',data.reportId);saveLocal(false);s.textContent=`✓ 저장 완료 · ${data.reportId} · ${data.savedAt||''}`}catch(e){s.textContent='저장 실패: '+e.message}finally{b.disabled=false}}
+function render(){const total=n('real')+n('move'),people=n('pFire')+n('pPolice')+n('pAgency')+n('pVolunteer')+n('pOtherN');$('preview').textContent=`완주군 ${v('town')} ${v('ri')} ${v('target')} 화재\n\n수신: 전북특별도지사 / 참조: 119종합상황실장\n발신: 완주소방서장 / 발신지: 완주소방서 현장대응단\n작성자: ${v('writer')} / 보고책임자: ${v('boss')} / 접수시간: ${v('recv')}\n\n1. 발생개요\n 가. 일시: ${v('date')} ${v('recv')}(접수) ~ ${v('end')}(${v('status')})\n   ※ 선착대 ${v('first')} ${v('firstKm')}km, 본서 ${v('hqKm')}km\n 나. 장소: ${address()}\n 다. 구조: ${v('structure')}\n 라. 대상: ${v('target')}\n 마. 원인: ${v('cause')}\n 바. 사고개요: ${v('summary')}\n\n2. 피해상황\n 가. 인명피해: ${v('human')} ${v('humanDetail')}\n 나. 재산피해: ${total.toLocaleString()}천원(부동산 ${n('real').toLocaleString()}천원, 동산 ${n('move').toLocaleString()}천원)\n   ○ 부동산: ${v('realDetail')||'해당없음'}\n   ○ 동산: ${v('moveDetail')||'해당없음'}\n\n3. 동원상황\n 가. 인원: ${people}명(소방 ${n('pFire')}, 경찰 ${n('pPolice')}, 유관기관 ${n('pAgency')}, 의소대 ${n('pVolunteer')}${v('pOther')?', '+v('pOther'):''})\n 나. 장비: ${n('vehicleN')}대(${v('vehicles')})\n\n4. 조치사항\n${v('actions')}\n\n5. 그 밖의 사항\n ○ 보험가입: ${v('insurance')}${v('insuranceDetail')?' - '+v('insuranceDetail'):''}\n ○ 특이사항: ${v('special')||'없음'}`}
+function saveLocal(show=true){const d={};document.querySelectorAll('[id]').forEach(e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.tagName))d[e.id]=e.value});localStorage.setItem('wanjuFireReportV2',JSON.stringify(d));if(show)alert('현재 기기에 임시저장했습니다.')}
+function restoreLocal(){const ss=localStorage.getItem('wanjuFireReportV2')||localStorage.getItem('wanjuFireReportV1');if(!ss)return;try{const d=JSON.parse(ss);Object.entries(d).forEach(([k,x])=>{if($(k))$(k).value=x});updateRiButtons();if(d.ri)selectChoice('riChoices','ri',d.ri);restoreSelected('writerChoices','writer');restoreSelected('bossChoices','boss');restoreSelected('structureChoices','structureType');restoreSelected('roofChoices','roofType')}catch(e){}}
+function restoreSelected(containerId,targetId){const val=v(targetId);document.querySelectorAll('#'+containerId+' .choice').forEach(b=>b.classList.toggle('selected',b.dataset.value===val))}
+makeChoices('writerChoices',WRITERS,'writer');makeChoices('bossChoices',BOSSES,'boss');makeChoices('structureChoices',STRUCTURES,'structureType',composeStructure);makeChoices('roofChoices',ROOFS,'roofType',composeStructure);$('area').addEventListener('input',composeStructure);$('groundFloors').addEventListener('input',composeStructure);$('underFloors').addEventListener('input',composeStructure);restoreLocal();
 </script>
 </body>
 </html>
