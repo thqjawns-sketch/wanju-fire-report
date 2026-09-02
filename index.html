@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>완주소방서 화재상황보고 V1.3</title>
+<title>완주소방서 화재상황보고 V1.4</title>
 <style>
 body{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0;background:#f5f6f8;color:#111}
 header{padding:18px;background:#fff;border-bottom:1px solid #ddd}
@@ -19,12 +19,12 @@ textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10
 .auto{background:#eef6ff}.hint{font-size:12px;color:#666;margin-top:5px}.preview{white-space:pre-wrap;line-height:1.7;border:1px dashed #aaa;padding:14px}.status{font-size:13px;margin-top:10px;font-weight:700}
 .resultbox{display:none;margin-top:10px;padding:12px;background:#f7f5ff;border:1px solid #ddd6fe;border-radius:10px}
 .resultbox.show{display:block}.ok{color:#166534}.warn{color:#b45309}.err{color:#b91c1c}
-.distanceBox{margin-top:10px}.distanceBox>span{display:block;font-size:13px;font-weight:700}.distanceRow{display:grid;grid-template-columns:1fr 68px 68px 68px;gap:6px;align-items:end}.distanceRow input{margin-top:4px}.kmBtn{height:44px;border:1px solid #bbb;background:#fff;border-radius:9px;font-size:16px;font-weight:800;cursor:pointer}.kmBtn:active{background:#e5e7eb}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.distanceRow{grid-template-columns:1fr 64px 64px 64px}}
+.distanceBox{margin-top:10px}.distanceBox>span{display:block;font-size:13px;font-weight:700}.distanceRow{display:grid;grid-template-columns:1fr 60px 60px 60px 60px;gap:6px;align-items:end}.distanceRow input{margin-top:4px}.kmBtn{height:44px;border:1px solid #bbb;background:#fff;border-radius:9px;font-size:16px;font-weight:800;cursor:pointer}.kmBtn:active{background:#e5e7eb}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.distanceRow{grid-template-columns:1fr 56px 56px 56px 56px}}
 </style>
 </head>
 <body>
-<header><h1>🔥 완주소방서 화재상황보고 V1.3</h1><small>현장 입력 최소화 · 주소 수기입력 · 거리 빠른입력 · 건축물대장 구조 조회</small></header>
+<header><h1>🔥 완주소방서 화재상황보고 V1.4</h1><small>현장 입력 최소화 · 주소 수기입력 · 거리 빠른입력 · 건축물대장 구조 조회</small></header>
 <main>
 <div class="card"><h2>기본정보</h2><div class="grid">
 <label>작성자<input id="writer"></label><label>보고책임자<input id="boss"></label><label>접수시간<input id="recv" type="time" step="1"></label>
@@ -46,10 +46,10 @@ textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10
 <label>선착대<select id="first"><option value="">선택</option><option>봉동119안전센터</option><option>소양지역대</option><option>삼례119안전센터</option><option>고산119안전센터</option><option>운주지역대</option><option>화산지역대</option><option>혁신119안전센터</option><option>구이119안전센터</option><option>상관지역대</option></select></label>
 </div>
 <div class="grid">
-<div class="distanceBox"><span>선착대 거리 km</span><div class="distanceRow"><input id="firstKm" type="number" step=".1" inputmode="decimal" placeholder="직접입력"><button type="button" class="kmBtn" onclick="addKm('firstKm',1)">+1</button><button type="button" class="kmBtn" onclick="addKm('firstKm',5)">+5</button><button type="button" class="kmBtn" onclick="addKm('firstKm',10)">+10</button></div></div>
-<div class="distanceBox"><span>본서 거리 km</span><div class="distanceRow"><input id="hqKm" type="number" step=".1" inputmode="decimal" placeholder="직접입력"><button type="button" class="kmBtn" onclick="addKm('hqKm',1)">+1</button><button type="button" class="kmBtn" onclick="addKm('hqKm',5)">+5</button><button type="button" class="kmBtn" onclick="addKm('hqKm',10)">+10</button></div></div>
+<div class="distanceBox"><span>선착대 거리 km</span><div class="distanceRow"><input id="firstKm" type="number" step=".1" inputmode="decimal" placeholder="직접입력"><button type="button" class="kmBtn" onclick="addKm('firstKm',-1)">-1</button><button type="button" class="kmBtn" onclick="addKm('firstKm',1)">+1</button><button type="button" class="kmBtn" onclick="addKm('firstKm',5)">+5</button><button type="button" class="kmBtn" onclick="addKm('firstKm',10)">+10</button></div></div>
+<div class="distanceBox"><span>본서 거리 km</span><div class="distanceRow"><input id="hqKm" type="number" step=".1" inputmode="decimal" placeholder="직접입력"><button type="button" class="kmBtn" onclick="addKm('hqKm',-1)">-1</button><button type="button" class="kmBtn" onclick="addKm('hqKm',1)">+1</button><button type="button" class="kmBtn" onclick="addKm('hqKm',5)">+5</button><button type="button" class="kmBtn" onclick="addKm('hqKm',10)">+10</button></div></div>
 </div>
-<div class="hint">1·5·10 버튼은 현재 거리값에 더해집니다. 소수점 거리는 숫자칸을 직접 수정할 수 있습니다.</div>
+<div class="hint">-1·+1·+5·+10 버튼으로 빠르게 조정할 수 있습니다. 거리는 0km 아래로 내려가지 않으며 소수점은 숫자칸에서 직접 수정할 수 있습니다.</div>
 
 <button id="buildingBtn" class="btn building" onclick="lookupBuilding()">🏢 건축물대장 조회</button>
 <div id="buildingStatus" class="hint">읍·면, 리, 지번을 입력한 뒤 조회하면 건축물대장 자료를 확인할 수 있습니다.</div>
@@ -96,7 +96,7 @@ if(!$('date').value)$('date').value=new Date().toISOString().slice(0,10);
 function addKm(id,amount){
   const el=$(id);if(!el)return;
   const cur=Number(el.value||0);
-  const next=Math.round((cur+amount)*10)/10;
+  const next=Math.max(0,Math.round((cur+amount)*10)/10);
   el.value=String(next);
 }
 
