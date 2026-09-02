@@ -1,0 +1,60 @@
+name: Apply V2.6 mobilization
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v26-mobilization.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch mobilization UI
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          s = s.replace('완주소방서 화재상황보고 V2.5', '완주소방서 화재상황보고 V2.6')
+          s = s.replace('현장 클릭 입력 중심 · 법령기준 피해액 자동계산', '현장 클릭 입력 중심 · 피해액 자동계산 · 동원상황 차량클릭')
+
+          css = r'''.vehicleGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.vehicleItem{border:1px solid #d1d5db;border-radius:12px;padding:8px;background:#fff}.vehicleMain{width:100%;min-height:48px;border:0;border-radius:9px;background:#f8fafc;font-weight:900;font-size:15px;cursor:pointer}.vehicleMain.active{background:#e0e7ff;color:#1e3a8a}.vehicleCtl{display:grid;grid-template-columns:42px 1fr;gap:6px;margin-top:6px}.vehicleMinus{border:1px solid #d1d5db;background:#fff;border-radius:8px;font-size:18px;font-weight:900}.vehicleCount{text-align:center;font-weight:900;padding:9px;border-radius:8px;background:#f3f4f6}.mobilSummary{margin-top:12px;padding:14px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:12px}.mobilSummary .big{font-size:24px;font-weight:900}.otherRow{display:grid;grid-template-columns:1fr 90px 72px;gap:7px;margin-top:8px}.otherList{margin-top:8px;display:flex;flex-direction:column;gap:6px}.otherEntry{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:9px}.otherEntry button{border:0;background:#fff1f2;color:#be123c;border-radius:7px;padding:7px 9px;font-weight:900}.personBox{margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:12px}.personGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.personGrid label{margin-top:0}.estimate{font-size:12px;color:#1d4ed8;margin-top:6px}.hiddenInput{display:none}@media(max-width:650px){.vehicleGrid{grid-template-columns:repeat(2,1fr)}.personGrid{grid-template-columns:1fr 1fr}.otherRow{grid-template-columns:1fr 78px 68px}}'''
+          if '.vehicleGrid{' not in s:
+              s = s.replace('</style>', css + '</style>')
+
+          old = '''<div class="card"><h2>4. 동원상황</h2><div class="grid"><label>소방 명<input id="pFire" type="number" value="0"></label><label>경찰 명<input id="pPolice" type="number" value="0"></label><label>유관기관 명<input id="pAgency" type="number" value="0"></label><label>의소대 명<input id="pVolunteer" type="number" value="0"></label><label>기타인원 합계<input id="pOtherN" type="number" value="0"></label><label>기타인원 내용<input id="pOther"></label><label>장비 총계 대<input id="vehicleN" type="number" value="0"></label></div><label>장비 세부<input id="vehicles"></label></div>'''
+          new = '''<div class="card"><h2>4. 동원상황</h2><div class="hint">차량 종류를 누를 때마다 1대씩 증가합니다. 잘못 눌렀으면 아래 − 버튼으로 줄이세요.</div><h3>자주 출동하는 차량</h3><div id="vehicleMainGrid" class="vehicleGrid"></div><h3>특수·기타 차량</h3><div id="vehicleSpecialGrid" class="vehicleGrid"></div><div class="mobilSummary"><div class="miniLabel">장비 총계</div><div id="vehicleTotalView" class="big">0대</div><div id="vehicleDetailView" class="miniLabel">선택된 차량 없음</div></div><input id="vehicleN" class="hiddenInput" value="0"><input id="vehicles" class="hiddenInput"><input id="vehicleCountsJson" class="hiddenInput" value="{}"><input id="otherVehiclesJson" class="hiddenInput" value="[]"><h3>기타차량 직접입력</h3><div class="otherRow"><input id="otherVehicleName" placeholder="예: 굴삭기 / 군청차량"><input id="otherVehicleCount" type="number" min="1" value="1"><button type="button" class="btn blue" onclick="addOtherVehicle()">추가</button></div><div id="otherVehicleList" class="otherList"></div><div class="personBox"><h3 style="margin-top:0">인원</h3><div id="personEstimate" class="estimate">차량을 선택하면 예상인원이 자동 계산됩니다.</div><div class="personGrid"><label>소방 명<input id="pFire" type="number" min="0" value="0"></label><label>경찰 명<input id="pPolice" type="number" min="0" value="0"></label><label>유관기관 명<input id="pAgency" type="number" min="0" value="0"></label><label>의소대 명<input id="pVolunteer" type="number" min="0" value="0"></label><label>기타 명<input id="pOtherN" type="number" min="0" value="0"></label></div><label>기타인원 내용<input id="pOther" placeholder="예: 군청 2명 / 가스안전공사 1명"></label><div class="hint">차량기준 인원은 예상값입니다. 실제 현장 출동인원이 다르면 숫자를 직접 수정하면 됩니다.</div><button type="button" class="btn gray" onclick="applyEstimatedPeople()">차량기준 예상인원 다시 적용</button></div></div>'''
+          if old not in s:
+              raise SystemExit('mobilization block not found')
+          s = s.replace(old, new)
+
+          vehicle_js = r'''const VEHICLE_MAIN=[['지휘','fire',5],['펌프','fire',4],['물탱크','fire',1],['구조','fire',3],['구급','fire',3],['경찰','police',2],['한전','agency',2]];const VEHICLE_SPECIAL=[['고가/굴절','fire',3],['소사','fire',3],['조배연','fire',3],['화학','fire',3],['화재조사','fire',3],['중장비','fire',3],['산불진화차','fire',3]];let vehicleCounts={},otherVehicles=[];function vehicleDefs(){return [...VEHICLE_MAIN,...VEHICLE_SPECIAL]}function safeVehicleId(x){return x.replace(/[^0-9A-Za-z가-힣]/g,'_')}function makeVehicleGrid(id,defs){let g=$(id);g.innerHTML='';defs.forEach(([name])=>{let item=document.createElement('div');item.className='vehicleItem';let main=document.createElement('button');main.type='button';main.className='vehicleMain';main.id='vbtn_'+safeVehicleId(name);main.addEventListener('click',()=>changeVehicle(name,1));let ctl=document.createElement('div');ctl.className='vehicleCtl';let minus=document.createElement('button');minus.type='button';minus.className='vehicleMinus';minus.textContent='−';minus.addEventListener('click',()=>changeVehicle(name,-1));let count=document.createElement('div');count.className='vehicleCount';count.id='vc_'+safeVehicleId(name);ctl.append(minus,count);item.append(main,ctl);g.appendChild(item)});renderVehicles()}function changeVehicle(name,delta){vehicleCounts[name]=Math.max(0,Number(vehicleCounts[name]||0)+delta);renderVehicles();applyEstimatedPeople()}function addOtherVehicle(){let name=v('otherVehicleName').trim(),count=Math.max(1,Math.floor(n('otherVehicleCount')||1));if(!name){$('otherVehicleName').focus();return}let old=otherVehicles.find(x=>x.name===name);if(old)old.count+=count;else otherVehicles.push({name,count});vset('otherVehicleName','');vset('otherVehicleCount','1');renderVehicles();applyEstimatedPeople()}function removeOtherVehicle(i){otherVehicles.splice(i,1);renderVehicles();applyEstimatedPeople()}function renderOtherVehicles(){let box=$('otherVehicleList');box.innerHTML='';otherVehicles.forEach((x,i)=>{let row=document.createElement('div');row.className='otherEntry';let name=document.createElement('strong');name.textContent=x.name;let cnt=document.createElement('span');cnt.textContent=x.count+'대';let del=document.createElement('button');del.type='button';del.textContent='삭제';del.addEventListener('click',()=>removeOtherVehicle(i));row.append(name,cnt,del);box.appendChild(row)})}function renderVehicles(){vehicleDefs().forEach(([name])=>{let c=Number(vehicleCounts[name]||0),b=$('vbtn_'+safeVehicleId(name)),out=$('vc_'+safeVehicleId(name));if(b){b.textContent=name+(c?' '+c+'대':'');b.classList.toggle('active',c>0)}if(out)out.textContent=c+'대'});renderOtherVehicles();let parts=vehicleDefs().map(([name])=>[name,Number(vehicleCounts[name]||0)]).filter(x=>x[1]>0).map(x=>x[0]+' '+x[1]+'대');otherVehicles.forEach(x=>parts.push(x.name+' '+x.count+'대'));let total=vehicleDefs().reduce((a,[name])=>a+Number(vehicleCounts[name]||0),0)+otherVehicles.reduce((a,x)=>a+Number(x.count||0),0);vset('vehicleN',String(total));vset('vehicles',parts.join(', '));vset('vehicleCountsJson',JSON.stringify(vehicleCounts));vset('otherVehiclesJson',JSON.stringify(otherVehicles));$('vehicleTotalView').textContent=total+'대';$('vehicleDetailView').textContent=parts.length?parts.join(' · '):'선택된 차량 없음';updatePersonEstimateText()}function estimatedPeople(){let e={fire:0,police:0,agency:0};vehicleDefs().forEach(([name,group,per])=>e[group]+=Number(vehicleCounts[name]||0)*per);e.fire+=otherVehicles.reduce((a,x)=>a+Number(x.count||0)*3,0);return e}function updatePersonEstimateText(){let e=estimatedPeople();$('personEstimate').textContent=`차량기준 예상 → 소방 ${e.fire}명 · 경찰 ${e.police}명 · 유관기관 ${e.agency}명 (기타차량은 1대당 3명 기준)`}function applyEstimatedPeople(){let e=estimatedPeople();vset('pFire',String(e.fire));vset('pPolice',String(e.police));vset('pAgency',String(e.agency));updatePersonEstimateText()}function loadVehicleState(){try{vehicleCounts=JSON.parse(v('vehicleCountsJson')||'{}')||{}}catch(e){vehicleCounts={}}try{otherVehicles=JSON.parse(v('otherVehiclesJson')||'[]')||[]}catch(e){otherVehicles=[]}renderVehicles()}'''
+          marker = 'function address(){'
+          if 'const VEHICLE_MAIN=' not in s:
+              if marker not in s:
+                  raise SystemExit('address marker not found')
+              s = s.replace(marker, vehicle_js + marker, 1)
+
+          init_old = "initDamageCalculator();restore();syncDamageCards();"
+          init_new = "initDamageCalculator();makeVehicleGrid('vehicleMainGrid',VEHICLE_MAIN);makeVehicleGrid('vehicleSpecialGrid',VEHICLE_SPECIAL);restore();loadVehicleState();syncDamageCards();"
+          if init_old not in s:
+              raise SystemExit('init marker not found')
+          s = s.replace(init_old, init_new, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit V2.6
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "V2.6 동원상황 차량 클릭 자동집계" || exit 0
+          git push
