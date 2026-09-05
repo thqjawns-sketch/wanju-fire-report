@@ -137,9 +137,13 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0));else setTimeout(install,0);
 })();
 (function(){
+  function loadCause(){
+    if(document.getElementById('wanjuFireCauseScript'))return;
+    const c=document.createElement('script');c.id='wanjuFireCauseScript';c.src='app-v3-fire-cause.js?v=20260905e';c.defer=true;document.head.appendChild(c);
+  }
   function loadOverview(){
-    if(document.getElementById('wanjuOverviewBuilderScript'))return;
-    const o=document.createElement('script');o.id='wanjuOverviewBuilderScript';o.src='app-v3-overview-builder.js?v=20260905d';o.defer=true;document.head.appendChild(o);
+    if(document.getElementById('wanjuOverviewBuilderScript')){setTimeout(loadCause,80);return}
+    const o=document.createElement('script');o.id='wanjuOverviewBuilderScript';o.src='app-v3-overview-builder.js?v=20260905d';o.defer=true;o.onload=loadCause;document.head.appendChild(o);setTimeout(loadCause,550);
   }
   const existing=document.getElementById('wanjuRelationsScript');
   if(existing){existing.addEventListener('load',loadOverview,{once:true});setTimeout(loadOverview,350);return}
