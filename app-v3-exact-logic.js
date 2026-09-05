@@ -19,3 +19,49 @@ buildReportPaper=function(){updateDamageCalc();syncActionsText();let people=n('p
 async function exactLoadTemplate(){return JSZip.loadAsync(EXACT_HWPX_TEMPLATE_B64,{base64:true})}
 function exactPatchSection(xml){let doc=new DOMParser().parseFromString(xml,'application/xml');if(doc.getElementsByTagName('parsererror').length)throw Error('원본 HWPX 본문을 읽지 못했습니다.');let ps=exactHwpxParas(doc);if(ps.length<49)throw Error('원본 HWPX 양식 구조가 예상과 다릅니다.');exactSetWhole(ps[4],'수신: 전북특별도지사');exactSetWhole(ps[5],'참조: 119종합상황실장');exactSetWhole(ps[6],'발신: 완주소방서장');exactSetLast(ps[7],`: ${reportNow()}`);exactSetWhole(ps[8],`작  성  자: ${v('writer')||'-'}`);exactSetWhole(ps[9],`보고책임자: ${v('boss')||'-'}`);exactSetWhole(ps[15],v('recv')||'-');exactSetWhole(ps[17],` ${reportTitleText()}`);exactSetWhole(ps[19],`  가. 일    시: ${incidentDateText()} ${v('recv')}(접수) ~ ${exactEndText()}`);let t20=exactHwpxTexts(ps[20]);if(t20.length>=3)t20[2].textContent=`선착대 ${v('first')||'-'} ${v('firstKm')||'-'}km, 본서 ${v('hqKm')||'-'}km`;else exactSetWhole(ps[20],`     ※ 선착대 ${v('first')||'-'} ${v('firstKm')||'-'}km, 본서 ${v('hqKm')||'-'}km`);exactSetWhole(ps[21],`  나. 장    소: ${address()||'-'}`);let t22=exactHwpxTexts(ps[22]);if(t22.length>=2)t22[t22.length-1].textContent=` ${v('target')||'-'}`;else exactSetWhole(ps[22],`  다. 대    상: ${v('target')||'-'}`);let t23=exactHwpxTexts(ps[23]);if(t23.length>=2)t23[t23.length-1].textContent=`※ ${v('structure')||'-'}`;else exactSetWhole(ps[23],`   ※ ${v('structure')||'-'}`);exactSetWhole(ps[24],`  라. 소 유 자: ${v('owner')||''}`);exactSetWhole(ps[25],`  마. 원    인: ${v('cause')||'조사 중'}`);let t26=exactHwpxTexts(ps[26]);if(t26.length>=3)t26[t26.length-1].textContent=v('summary')||'사고개요 입력 없음';else exactSetWhole(ps[26],`  바.사고개요:${v('summary')||'사고개요 입력 없음'}`);let damage=exactDamageLines();exactSetWhole(ps[29],`  가. 인명피해: ${v('human')==='있음'?(v('humanDetail')||'있음'):'피해 없음'}`);exactSetWhole(ps[30],damage[0]);exactSetWhole(ps[31],damage[1]);exactSetWhole(ps[32],damage[2]);exactSetWhole(ps[35],exactPeopleLine());exactSetWhole(ps[36],exactVehicleLine());exactSetWhole(ps[37],`  다. 소방용수: ${v('fireWater')||'미사용'}`);let acts=timeline(),baseActions=ps.slice(40,46),section5=ps[47];for(let i=0;i<baseActions.length;i++)exactSetWhole(baseActions[i],acts[i]?`  ○ ${(acts[i].time?acts[i].time+' ':'')+acts[i].text}`:'');if(acts.length>baseActions.length){let parent=section5.parentNode,model=baseActions[baseActions.length-1];for(let i=baseActions.length;i<acts.length;i++){let clone=model.cloneNode(true);exactSetWhole(clone,`  ○ ${(acts[i].time?acts[i].time+' ':'')+acts[i].text}`);parent.insertBefore(clone,section5)}}exactSetWhole(ps[48],exactInsuranceLine());return new XMLSerializer().serializeToString(doc)}
 saveReportHwpx=async function(){try{buildReportPaper();if(!window.JSZip)throw Error('한글 저장 모듈을 불러오지 못했습니다.');$('reportExportStatus').textContent='실제 본부 원본양식에 내용 넣는 중...';let zip=await exactLoadTemplate(),sf=zip.file('Contents/section0.xml');if(!sf)throw Error('원본 HWPX 본문이 없습니다.');let section=exactPatchSection(await sf.async('string'));zip.file('Contents/section0.xml',section);let lines=reportPlainLinesExact();zip.file('Preview/PrvText.txt',lines.join('\n'));let hpf=zip.file('Contents/content.hpf');if(hpf){let txt=await hpf.async('string');txt=txt.replace(/<opf:title>[\s\S]*?<\/opf:title>/,`<opf:title>${xmlEsc(reportTitleText())}</opf:title>`).replace(/<dc:title>[\s\S]*?<\/dc:title>/,`<dc:title>${xmlEsc(reportTitleText())}</dc:title>`);zip.file('Contents/content.hpf',txt)}zip.file('mimetype','application/hwp+zip',{compression:'STORE'});let blob=await zip.generateAsync({type:'blob',mimeType:'application/hwp+zip',compression:'DEFLATE',compressionOptions:{level:6}});downloadBlob(blob,reportFileBase()+'.hwpx');$('reportExportStatus').textContent='✓ 실제 원본 양식 그대로 HWPX 저장 완료'}catch(e){console.error(e);$('reportExportStatus').textContent='한글 저장 실패: '+e.message}};
+
+// V3.4 unified native time picker (HH:MM:SS)
+function normalizeClockValue(x){
+  x=String(x||'').trim();
+  if(!x)return '';
+  let m=x.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if(!m)return x;
+  let hh=Math.min(23,Math.max(0,Number(m[1]))),mm=Math.min(59,Math.max(0,Number(m[2]))),ss=Math.min(59,Math.max(0,Number(m[3]||0)));
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+function nativeTimeField(el){
+  if(!el)return;
+  el.type='time';
+  el.step='1';
+  el.removeAttribute('readonly');
+  el.classList.remove('readonly');
+  if(el.value)el.value=normalizeClockValue(el.value);
+  const normalize=()=>{if(el.value)el.value=normalizeClockValue(el.value)};
+  el.addEventListener('change',normalize);
+  el.addEventListener('blur',normalize);
+}
+reportNow=function(){let d=new Date(),w=['일','월','화','수','목','금','토'];return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.(${w[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`};
+previousActionTime=function(){for(let i=actionState.length-1;i>=0;i--){if(actionState[i].time)return normalizeClockValue(actionState[i].time)}return normalizeClockValue(v('recv')||'')};
+renderActionRows=function(){
+  let box=$('actionRows');if(!box)return;box.innerHTML='';
+  actionState.forEach((a,i)=>{
+    a.time=normalizeClockValue(a.time||'');
+    let row=document.createElement('div');row.className='actionRow';
+    let line=document.createElement('div');line.className='actionLine';
+    let tm=document.createElement('input');tm.id='actionTime_'+i;tm.className='actionTime';tm.type='time';tm.step='1';tm.value=a.time||'';tm.title='모바일 기본 시간 선택기 · 시:분:초';
+    tm.onchange=e=>{actionState[i].time=normalizeClockValue(e.target.value);e.target.value=actionState[i].time;syncActionsText()};
+    let tx=document.createElement('input');tx.id='actionText_'+i;tx.className='actionText';tx.value=a.text||'';tx.placeholder='조치내용';tx.oninput=e=>updateActionText(i,e.target.value);
+    let del=document.createElement('button');del.type='button';del.className='actionDel';del.textContent='삭제';del.onclick=()=>deleteAction(i);
+    line.append(tm,tx,del);row.append(line);box.appendChild(row);
+  });
+  updateActionButtonState();syncActionsText();
+};
+function applyUnifiedNativeTime(){
+  nativeTimeField($('recv'));nativeTimeField($('end'));
+  ['recv','end'].forEach(id=>{$(id)?.addEventListener('change',()=>{if(v(id))vset(id,normalizeClockValue(v(id)));if(id==='recv'){actionState.forEach(a=>{if(a.type==='dispatch')a.time=normalizeClockValue(v('recv'))});renderActionRows()}})});
+  let help=document.querySelector('.actionHelp');if(help)help.textContent='시간 칸을 누르면 모바일 기본 시간 선택기가 열립니다. 시·분·초(HH:MM:SS)로 통일됩니다.';
+  if(document.querySelector('header h1'))document.querySelector('header h1').textContent='🔥 완주소방서 화재상황보고 V3.4';
+  document.title='완주소방서 화재상황보고 V3.4';
+  renderActionRows();
+}
+applyUnifiedNativeTime();
