@@ -5,6 +5,12 @@
   const ROW=48;
   let overlay=null, active=null, state={h:0,m:0,s:0}, scrollTimers={};
 
+  function getActions(){try{return Array.isArray(actionState)?actionState:null}catch(e){return null}}
+  function prevTime(){try{return typeof previousActionTime==='function'?previousActionTime():''}catch(e){return ''}}
+  function redrawAction(i){try{if(typeof renderActionTime==='function')renderActionTime(i)}catch(e){}}
+  function redrawRows(){try{if(typeof renderActionRows==='function')renderActionRows()}catch(e){}}
+  function syncActions(){try{if(typeof syncActionsText==='function')syncActionsText()}catch(e){}}
+
   function nowParts(){const d=new Date();return {h:d.getHours(),m:d.getMinutes(),s:d.getSeconds()}}
   function normalizeTime(value, fallbackNow=true){
     const m=String(value||'').trim().match(/^(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?$/);
@@ -78,30 +84,26 @@
     el.addEventListener('click',e=>{e.preventDefault();openTimeWheel({title,value:el.value,onConfirm:v=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));syncLinked(id,v)}})});
   }
   function syncLinked(id,v){
-    if(!Array.isArray(window.actionState))return;
+    const actions=getActions();if(!actions)return;
     if(id==='recv'){
-      const i=window.actionState.findIndex(x=>x.type==='dispatch');if(i>=0){window.actionState[i].time=v;window.renderActionTime&&window.renderActionTime(i)}
+      const i=actions.findIndex(x=>x.type==='dispatch');if(i>=0){actions[i].time=v;redrawAction(i)}
     }
     if(id==='end'){
-      const i=window.actionState.findIndex(x=>x.type==='complete'||x.type==='self');if(i>=0){window.actionState[i].time=v;window.renderActionTime&&window.renderActionTime(i)}
+      const i=actions.findIndex(x=>x.type==='complete'||x.type==='self');if(i>=0){actions[i].time=v;redrawAction(i)}
     }
   }
   function openAction(i){
-    if(!Array.isArray(window.actionState)||!window.actionState[i])return;
+    const actions=getActions();if(!actions||!actions[i])return;
     document.querySelectorAll('.actionPad.show').forEach(x=>x.classList.remove('show'));
-    let base=window.actionState[i].time||((window.previousActionTime&&window.previousActionTime())||document.getElementById('recv')?.value||'');
-    openTimeWheel({title:'조치시간',value:base,onConfirm:v=>{window.actionState[i].time=v;window.renderActionTime&&window.renderActionTime(i)}});
+    const base=actions[i].time||prevTime()||document.getElementById('recv')?.value||'';
+    openTimeWheel({title:'조치시간',value:base,onConfirm:v=>{actions[i].time=v;redrawAction(i)}});
   }
 
   function install(){
     setStatic('recv','접수시간');setStatic('end','종료시간');
-    if(Array.isArray(window.actionState)){
-      window.actionState.forEach(x=>{if(x.time)x.time=normalizeTime(x.time,false)});window.renderActionRows&&window.renderActionRows();window.syncActionsText&&window.syncActionsText();
-    }
-    window.toggleActionPad=function(i){openAction(i)};
-    window.addCustomAction=function(){
-      if(!Array.isArray(window.actionState))return;window.actionState.push({type:'custom',time:(window.previousActionTime&&window.previousActionTime())||'',text:''});window.renderActionRows&&window.renderActionRows();window.syncActionsText&&window.syncActionsText();openAction(window.actionState.length-1);
-    };
+    const actions=getActions();if(actions){actions.forEach(x=>{if(x.time)x.time=normalizeTime(x.time,false)});redrawRows();syncActions()}
+    try{toggleActionPad=function(i){openAction(i)}}catch(e){}
+    try{addCustomAction=function(){const a=getActions();if(!a)return;a.push({type:'custom',time:prevTime()||'',text:''});redrawRows();syncActions();openAction(a.length-1)}}catch(e){}
     document.addEventListener('click',e=>{
       const t=e.target;if(!(t instanceof Element)||!t.classList.contains('actionTime'))return;
       const m=(t.id||'').match(/^actionTime_(\d+)$/);if(!m)return;e.preventDefault();e.stopImmediatePropagation();openAction(Number(m[1]));
