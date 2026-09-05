@@ -136,4 +136,12 @@
   window.openWanjuTimeWheel=openTimeWheel;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0));else setTimeout(install,0);
 })();
-(function(){if(document.getElementById('wanjuRelationsScript'))return;const s=document.createElement('script');s.id='wanjuRelationsScript';s.src='app-v3-relations.js?v=20260905c';s.defer=true;document.head.appendChild(s)})();
+(function(){
+  function loadOverview(){
+    if(document.getElementById('wanjuOverviewBuilderScript'))return;
+    const o=document.createElement('script');o.id='wanjuOverviewBuilderScript';o.src='app-v3-overview-builder.js?v=20260905d';o.defer=true;document.head.appendChild(o);
+  }
+  const existing=document.getElementById('wanjuRelationsScript');
+  if(existing){existing.addEventListener('load',loadOverview,{once:true});setTimeout(loadOverview,350);return}
+  const s=document.createElement('script');s.id='wanjuRelationsScript';s.src='app-v3-relations.js?v=20260905c';s.defer=true;s.onload=loadOverview;document.head.appendChild(s);
+})();
