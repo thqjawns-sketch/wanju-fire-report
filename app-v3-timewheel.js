@@ -145,7 +145,7 @@
   }
   function loadOverview(){
     if(document.getElementById('wanjuOverviewBuilderScript')){setTimeout(loadCause,80);return}
-    const o=document.createElement('script');o.id='wanjuOverviewBuilderScript';o.src='app-v3-overview-builder.js?v=20260905d';o.defer=true;o.onload=loadCause;document.head.appendChild(o);setTimeout(loadCause,550);
+    const o=document.createElement('script');o.id='wanjuOverviewBuilderScript';o.src='app-v3-overview-builder.js?v=20260905f';o.defer=true;o.onload=loadCause;document.head.appendChild(o);setTimeout(loadCause,550);
   }
   const existing=document.getElementById('wanjuRelationsScript');
   if(existing){existing.addEventListener('load',loadOverview,{once:true});setTimeout(loadOverview,350);return}
