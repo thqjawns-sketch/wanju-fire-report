@@ -1,176 +1,189 @@
-/* Wanju Fire Report V3.9 - AI 없이 선택식 사고개요 자동작성 */
+/* Wanju Fire Report V3.11 - 2025 보고서 문맥 기반 선택식 사고개요 */
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const state={
-    reporter:{name:'',gender:'',birthYear:'',source:'direct'},
-    situation:'', anomaly:'', discovery:'', arrival:'',
-    actions:[], marks:[],
-    discoverPlace:'', investigatePlace:'',
-    situationOther:'', anomalyOther:'', discoveryOther:'', arrivalOther:'', markOther:''
-  };
 
-  const SINGLE={
-    situation:[
-      ['home','자택 내 체류','자택 내에 있던 중'],['sleep','취침 중','방에서 취침 중'],['away','외출 후 귀가','외출 후 귀가하여'],['work','작업 중','작업 중'],['cook','조리 중','음식물을 조리하던 중'],['burn','쓰레기 소각 중','쓰레기를 소각하던 중'],['weld','용접·절단 중','용접·절단 작업 중'],['machine','기계 가동 중','기계를 가동하던 중'],['vehicle','차량 운행·정차 중','차량을 운행·정차 중'],['other','기타','']
-    ],
-    anomaly:[
-      ['bang','“펑” 소리','“펑”하는 소리를 듣고'],['puck','“퍽” 소리','“퍽”하는 소리를 듣고'],['smell','타는 냄새','타는 냄새를 맡고'],['smoke','연기','연기가 발생하는 것을 보고'],['flame','화염','화염을 보고'],['spark','불꽃·스파크','불꽃 또는 스파크를 보고'],['blink','등 깜박임·정전','조명 깜박임 또는 정전 현상을 확인하고'],['breaker','차단기 작동','차단기가 작동한 것을 확인하고'],['alarm','경보기','경보기가 작동한 것을 듣고'],['told','주변인 알림','주변인의 화재 알림을 받고'],['other','기타','']
-    ],
-    discovery:[
-      ['fire','화재 발생 목격','화재가 발생한 것을 목격하고'],['flame','화염 발견','화염을 발견하여'],['smoke','연기 발견','연기를 발견하여'],['spark','불꽃 발견','불꽃을 발견하여'],['soot','탄화·그을음 발견','탄화 및 그을음을 발견하여'],['spread','주변으로 연소 확대','주변 가연물로 연소 확대되는 것을 목격하고'],['other','기타','']
-    ],
-    arrival:[
-      ['all','건물 전체 연소','현장 도착한바 건물 전체가 연소 중이었으며'],['part','건물 일부 연소','현장 도착한바 건물 일부가 연소 중이었으며'],['smoke','연기 분출','현장 도착한바 건물에서 다량의 연기가 분출되고 있었으며'],['flame','화염 분출','현장 도착한바 건물에서 화염이 분출되고 있었으며'],['spread','연소 확대 중','현장 도착한바 연소가 주변으로 확대 중이었으며'],['self','자체진화 상태','현장 도착한바 관계인에 의해 자체진화된 상태였으며'],['ember','잔화 상태','현장 도착한바 잔화가 남아 있는 상태였으며'],['post','사후조사','현장 도착한바 화재가 이미 진화된 상태로 사후조사를 실시하였으며'],['none','이상 없음','현장 도착한바 외관상 특이사항은 확인되지 않았으며'],['other','기타','']
-    ]
-  };
-  const MULTI={
-    actions:[
-      ['119','119 신고','119에 신고'],['self','자체진화','자체진화'],['ext','소화기 사용','소화기를 사용하여 초기진화'],['water','물·호스 사용','물을 사용하여 초기진화'],['power','전원 차단','전원을 차단'],['gas','가스 차단','가스를 차단'],['evac','대피','안전한 장소로 대피'],['notify','주변에 알림','주변에 화재 사실을 전파']
-    ],
-    marks:[
-      ['strong','강한 연소흔','강한 연소흔'],['char','심한 탄화','심한 탄화'],['v','V자형 연소패턴','V자형 연소패턴'],['up','상향 연소패턴','상향 연소패턴'],['short','단락흔','전기적 단락흔'],['melt','용융흔','용융흔'],['wire','전기배선 손상','전기배선의 소손 및 열변색'],['plug','콘센트·플러그 손상','콘센트 및 플러그의 소손'],['fuel','주변 가연물 확대흔','주변 가연물로의 연소확대 흔적'],['focus','집중 소실','특정 부위의 집중적인 소실'],['unknown','발화부 특정 곤란','발화부를 특정하기 곤란한 상태']
-    ]
-  };
-  const CAUSES=[
-    '조사 중','부주의(쓰레기 소각) 요인 추정','부주의(화목난로 취급) 요인 추정','부주의(화기취급) 요인 추정','부주의(용접·절단) 요인 추정','전기적(절연열화에 의한 단락) 요인 추정','전기적(접촉불량) 요인 추정','전기적 요인 추정','기계적 요인 추정','미상'
+  const MODES=[
+    ['normal','일반화재'],['self','자체진화'],['post','사후조사']
+  ];
+  const PLACES=[
+    '자택 내','방','거실','주방','보일러실','창고','공장 내부','작업장','사무실','축사','차량 내부','건물 외부','마당','옥상','지붕','천장','벽면','보일러실 벽면','노출콘센트 부근','벽면 콘센트 부근','전원 플러그 부근','전원선 부근','배전반 부근','화목난로 부근','화목난로 장작 투입구 부근','아궁이 부근','기계·설비 부근','차량 엔진룸','적재함','기타'
+  ];
+  const SPREADS=[
+    '주변 가연물','인접 가연물','거실','방','주방','천장','지붕','벽체','외벽','상층','인접실','건물 전체','창고 전체','공장 전체','인접 건물','건물 외부','볏짚','목재','합성수지','적재물','기타'
+  ];
+  const ACTIVITIES=[
+    ['stay','체류 중'],['sleep','취침 중'],['tv','TV 시청 중'],['meal','식사 중'],['cook','음식물 조리 중'],['work','작업 중'],['weld','용접·절단 작업 중'],['grind','그라인더 작업 중'],['burn','쓰레기 소각 중'],['furnace','아궁이 사용 중'],['woodstove','화목난로 사용 중'],['electric','전기기기 사용 중'],['machine','기계 가동 중'],['return','외출 후 귀가'],['drive','차량 운행 중'],['park','차량 정차 중'],['clean','청소 중'],['other','기타']
+  ];
+  const SIGNALS=[
+    ['flame','화염'],['smoke','연기'],['smell','타는 냄새'],['bang','“펑” 소리'],['puck','“퍽” 소리'],['explosion','폭발음'],['spark','불꽃·스파크'],['blink','등 깜박임'],['blackout','정전'],['breaker','차단기 작동'],['alarm','경보기 작동'],['heat','열기'],['soot','그을음'],['spread','연소 확대'],['other','기타']
+  ];
+  const PERCEPTIONS=[
+    ['see','목격하고'],['find','발견하고'],['smell','냄새를 맡고'],['hear','소리를 듣고'],['abnormal','이상징후를 발견하고'],['told','주변인에게 전해 듣고'],['check','확인하고']
+  ];
+  const ACTIONS=[
+    ['119','119에 신고'],['self','자체진화'],['ext','소화기를 사용하여 초기진화'],['water','물·호스를 사용하여 초기진화'],['power','전원을 차단'],['gas','가스를 차단'],['evac','안전한 장소로 대피'],['notify','주변에 화재 사실을 알림'],['later','사후 신고'],['other','기타 조치']
+  ];
+  const ARRIVAL_STATES=[
+    ['burning','연소 중인 상태였음'],['spreading','주변으로 연소 확대 중인 상태였음'],['partial','일부가 연소된 상태였음'],['all','전체가 연소된 상태였음'],['flame','화염이 분출 중인 상태였음'],['smoke','다량의 연기가 분출 중인 상태였음'],['self','관계인에 의해 자체진화된 상태였음'],['ember','잔화가 남아 있는 상태였음'],['out','이미 진화된 상태였음'],['other','기타']
+  ];
+  const EVIDENCE=[
+    ['related','관계인 진술'],['reporter','신고자 진술'],['first','최초 목격 위치'],['pattern','연소패턴'],['char','탄화 정도'],['strong','강한 연소흔'],['focus','집중 소실'],['v','V자형 연소패턴'],['up','상향 연소패턴'],['short','단락흔'],['melt','용융흔'],['wire','전기배선 소손'],['plug','콘센트·플러그 소손'],['cctv','CCTV'],['photo','사진·영상'],['exam','감식결과'],['other','기타']
+  ];
+  const USE_STATE=[
+    ['outlet','노출콘센트 사용'],['multi','멀티콘센트 연결 사용'],['plug','전원 플러그 연결 사용'],['wire','전원선 사용 중'],['electric','전기기기 사용 중'],['machine','기계·설비 가동 중'],['woodstove','화목난로 사용'],['furnace','아궁이 사용'],['burn','쓰레기·폐지 소각'],['near','주변 가연물 근접'],['weld','용접·절단 작업'],['other','기타']
+  ];
+  const OBSERVATIONS=[
+    ['strong','강한 연소흔'],['char','심한 탄화'],['focus','집중적인 소실'],['v','V자형 연소패턴'],['up','상향 연소패턴'],['short','전기적 단락흔'],['melt','용융흔'],['heat','열변색'],['wire','전기배선 소손'],['outlet','콘센트 소손'],['plug','플러그 소손'],['powerline','전원선 소손'],['spread','주변 가연물로의 연소확대 흔적'],['ash','소각 잔재'],['woodstove','화목난로 주변 탄화'],['furnace','아궁이 주변 탄화'],['soot','그을음'],['other','기타']
   ];
 
-  function selectedDef(group,key){return (SINGLE[group]||[]).find(x=>x[0]===key)}
+  const state={
+    mode:'normal',reporter:{name:'',gender:'',birthYear:'',source:'direct'},
+    where:'',whereOther:'',activity:'',activityOther:'',signalPlace:'',signalPlaceOther:'',signals:[],signalOther:'',perception:'abnormal',actions:['119'],actionOther:'',
+    arrivalOrigin:'',arrivalOriginOther:'',arrivalSpread:'',arrivalSpreadOther:'',arrivalState:'burning',arrivalStateOther:'',
+    evidence:['related','pattern','char'],evidenceOther:'',investOrigin:'',investOriginOther:'',investSpread:'',investSpreadOther:'',
+    useState:[],useOther:'',observations:[],observationOther:''
+  };
+
   function hasFinal(s){const t=String(s||'').trim();if(!t)return false;const c=t.charCodeAt(t.length-1);if(c>=0xAC00&&c<=0xD7A3)return ((c-0xAC00)%28)!==0;if(/[0-9]$/.test(t))return true;return false}
-  function josa(s,a,b){return s+(hasFinal(s)?a:b)}
-  function selectedPhrase(group){const d=selectedDef(group,state[group]);if(!d)return '';if(d[0]!=='other')return d[2];const val=state[group+'Other'].trim();return val}
+  function josa(s,a,b){return String(s||'')+(hasFinal(s)?a:b)}
+  function optionHtml(list,selected,placeholder){return `<option value="">${placeholder||'선택'}</option>`+list.map(x=>{const v=Array.isArray(x)?x[0]:x,l=Array.isArray(x)?x[1]:x;return `<option value="${esc(v)}" ${String(v)===String(selected)?'selected':''}>${esc(l)}</option>`}).join('')}
+  function arrLabel(list,key){const x=list.find(v=>(Array.isArray(v)?v[0]:v)===key);return x?(Array.isArray(x)?x[1]:x):''}
+  function selectedValue(selectId,otherId){const v=$(selectId)?.value||'';if(v==='기타'||v==='other')return ($(otherId)?.value||'').trim();return arrLabel(PLACES,v)||arrLabel(SPREADS,v)||v}
+  function joinKorean(arr){arr=arr.filter(Boolean);if(!arr.length)return '';if(arr.length===1)return arr[0];if(arr.length===2)return arr[0]+'와 '+arr[1];return arr.slice(0,-1).join(', ')+' 및 '+arr[arr.length-1]}
   function relationPerson(role){
-    const btn=$('relBtn_'+role),name=$('relName_'+role),birth=$('relBirth_'+role);
-    if(!btn?.classList.contains('on')||!name?.value.trim())return null;
-    let gender='';['남','여'].forEach(g=>{if($(`relGender_${role}_${g}`)?.classList.contains('on'))gender=g});
-    return {name:name.value.trim(),gender,birthYear:birth?.value||''};
+    const b=$('relBtn_'+role),n=$('relName_'+role),y=$('relBirth_'+role);if(!b?.classList.contains('on')||!n?.value.trim())return null;
+    let g='';['남','여'].forEach(x=>{if($(`relGender_${role}_${x}`)?.classList.contains('on'))g=x});return {name:n.value.trim(),gender:g,birthYear:y?.value||''};
   }
-  function setReporter(p,source){state.reporter={name:p?.name||'',gender:p?.gender||'',birthYear:p?.birthYear||'',source:source||'direct'};syncReporterUI();renderPreview()}
-  function reporterText(){
-    const r=state.reporter;if(!r.name.trim())return '';
-    const info=[r.gender,r.birthYear?`${r.birthYear}년생`:''].filter(Boolean).join(', ');
-    const who=`신고자 ${r.name.trim()}${info?`(${info})`:''}`;
-    return josa(who,'은','는');
+  function setReporter(p,source){state.reporter={name:p?.name||'',gender:p?.gender||'',birthYear:p?.birthYear||'',source:source||'direct'};syncReporter();render()}
+  function reporterText(){const r=state.reporter;if(!r.name.trim())return '신고자';const info=[r.gender,r.birthYear?`${r.birthYear}년생`:''].filter(Boolean).join(', ');return `신고자 ${r.name.trim()}${info?`(${info})`:''}`}
+  function whereActivity(){
+    const w=valueOf('where','ov11_whereOther'),a=state.activity,ao=state.activityOther.trim();
+    if(!w&&!a&&!ao)return '';
+    if(a==='stay')return w?`${w}에 있던 중`:'있던 중';
+    if(a==='return')return w?`${w}에 외출 후 귀가하여`:'외출 후 귀가하여';
+    const label=a==='other'?ao:arrLabel(ACTIVITIES,a);return [w?`${w}에서`:'',label].filter(Boolean).join(' ');
   }
-  function joinActions(){
-    const arr=MULTI.actions.filter(x=>state.actions.includes(x[0])).map(x=>x[2]);
-    if(!arr.length)return '';
-    if(arr.length===1)return `${arr[0]}한 건으로,`;
-    return arr.map((x,i)=>i===arr.length-1?`${x}한 건으로,`:`${x}하고`).join(' ');
+  function valueOf(key,otherId){const v=state[key];if(v==='기타')return ($(otherId)?.value||'').trim();return v}
+  function signalsText(){let a=SIGNALS.filter(x=>state.signals.includes(x[0])).map(x=>x[1]);if(state.signalOther.trim())a.push(state.signalOther.trim());return joinKorean(a)}
+  function perceptionPhrase(){return arrLabel(PERCEPTIONS,state.perception)||'이상징후를 발견하고'}
+  function actionsPhrase(){
+    let a=ACTIONS.filter(x=>state.actions.includes(x[0])).map(x=>x[1]);if(state.actionOther.trim())a.push(state.actionOther.trim());
+    if(!a.length)return '';
+    if(a.length===1)return a[0];
+    return a.map((x,i)=>i===a.length-1?x:(x.endsWith('신고')?x+'하고':x+'하고')).join(' ');
   }
-  function markSentence(){
-    let arr=MULTI.marks.filter(x=>state.marks.includes(x[0])).map(x=>x[2]);
-    if(state.markOther.trim())arr.push(state.markOther.trim());
-    if(!arr.length&&!state.investigatePlace.trim())return '';
-    const place=state.investigatePlace.trim()||'화재 현장';
-    if(!arr.length)return `현장 조사한바 ${place}를 중심으로 연소상태를 확인하였으며`;
-    const marks=arr.join(', ');
-    return arr.length>1?`현장 조사한바 ${place}에서 ${marks} 등이 관찰되며`:`현장 조사한바 ${place}에서 ${josa(marks,'이','가')} 관찰되며`;
+  function arrivalSentence(){
+    const origin=valueOf('arrivalOrigin','ov11_arrivalOriginOther'),to=valueOf('arrivalSpread','ov11_arrivalSpreadOther');
+    let st=state.arrivalState==='other'?state.arrivalStateOther.trim():arrLabel(ARRIVAL_STATES,state.arrivalState);
+    if(state.mode==='post'){
+      if(origin&&to)return `현장 도착하여 확인한 바 화재는 ${origin}에서 발생하여 ${to}${josa(to,'으로','로').slice(to.length)} 연소 확대된 후 이미 진화된 상태였음.`;
+      return '현장 도착하여 확인한 바 화재는 이미 진화된 상태였음.';
+    }
+    if(origin&&to)return `선착대 현장 도착하여 관찰한 바 화재는 ${origin}에서 발생하여 ${josa(to,'으로','로')} 연소 확대 ${st||'중인 상태였음'}.`;
+    if(origin)return `선착대 현장 도착하여 관찰한 바 ${origin} 부근이 ${st||'연소 중인 상태였음'}.`;
+    return st?`선착대 현장 도착하여 관찰한 바 화재는 ${st}.`:'';
   }
-  function causeSentence(){
-    let c=$('cause')?.value.trim()||'';
-    if(!c||c==='조사 중')return '화재원인은 현재 조사 중임.';
-    if(c==='미상')return '화재원인은 미상임.';
-    if(/추정됨|판단됨|확인됨/.test(c))return c.endsWith('.')?c:c+'.';
-    let base=c.replace(/\s*요인\s*추정\s*$/,'').replace(/\s*추정\s*$/,'').trim();
-    if(base)return `${base} 요인에 의해 화재가 발생한 것으로 추정됨.`;
-    return '';
+  function evidenceText(){let a=EVIDENCE.filter(x=>state.evidence.includes(x[0])).map(x=>x[1]);if(state.evidenceOther.trim())a.push(state.evidenceOther.trim());return joinKorean(a)}
+  function useText(){let a=USE_STATE.filter(x=>state.useState.includes(x[0])).map(x=>x[1]);if(state.useOther.trim())a.push(state.useOther.trim());return joinKorean(a)}
+  function obsText(){let a=OBSERVATIONS.filter(x=>state.observations.includes(x[0])).map(x=>x[1]);if(state.observationOther.trim())a.push(state.observationOther.trim());return joinKorean(a)}
+  function causeBase(){
+    let c=$('cause')?.value.trim()||'조사 중';
+    if(c==='조사 중'||c==='미상')return c;
+    return c.replace(/\s*(요인\s*)?(추정|판단)\s*$/,'').trim()+(c.includes('요인')?'':' 요인');
+  }
+  function investigationSentence(){
+    const ev=evidenceText(),origin=valueOf('investOrigin','ov11_investOriginOther'),to=valueOf('investSpread','ov11_investSpreadOther'),use=useText(),obs=obsText(),cause=causeBase();
+    let first='화재조사한 바';
+    if(ev)first+=` ${ev} 등을 종합하여 볼 때`;
+    if(origin)first+=` ${origin}에서 발화된 것으로 추정되며`;
+    if(to)first+=` ${josa(to,'으로','로')} 연소 확대된 것으로 추정됨.`;
+    else if(origin)first+='.';
+    else first+='.';
+    const details=[use,obs].filter(Boolean);
+    if(cause==='조사 중')return first+' 화재원인은 현재 조사 중임.';
+    if(cause==='미상')return first+' 화재원인은 미상임.';
+    if(details.length)return `${first} ${joinKorean(details)} 등이 관찰되는바 ${cause}에 의한 화재로 추정됨.`;
+    return `${first} ${cause}에 의한 화재로 추정됨.`;
   }
   function buildText(){
-    const parts=[];
-    const r=reporterText();if(r)parts.push(r);
-    const sit=selectedPhrase('situation');if(sit)parts.push(sit);
-    const an=selectedPhrase('anomaly');if(an)parts.push(an);
-    const dp=state.discoverPlace.trim();if(dp)parts.push(`${josa(dp,'을','를')} 확인한바`);
-    const dis=selectedPhrase('discovery');if(dis)parts.push(dis);
-    const act=joinActions();if(act)parts.push(act);
-    const arr=selectedPhrase('arrival');if(arr)parts.push(arr);
-    const mark=markSentence();if(mark)parts.push(mark);
-    parts.push(causeSentence());
-    let text=parts.filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
-    text=text.replace(/,\s*\./g,'.').replace(/\s+\./g,'.');
-    return text;
-  }
-  function renderPreview(){const e=$('overviewPreview');if(e)e.textContent=buildText()||'선택한 내용으로 사고개요 문장이 여기에 표시됩니다.';updateButtons()}
-  function applySummary(){const s=$('summary');if(!s)return;const t=buildText();if(!t)return;s.value=t;s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}));$('overviewApplyStatus').textContent='✓ 사고개요에 적용됨'}
-  function clearBuilder(){
-    Object.assign(state,{reporter:{name:'',gender:'',birthYear:'',source:'direct'},situation:'',anomaly:'',discovery:'',arrival:'',actions:[],marks:[],discoverPlace:'',investigatePlace:'',situationOther:'',anomalyOther:'',discoveryOther:'',arrivalOther:'',markOther:''});
-    syncInputs();renderPreview();$('overviewApplyStatus').textContent='';
+    const who=reporterText(),wa=whereActivity(),sp=valueOf('signalPlace','ov11_signalPlaceOther'),sig=signalsText(),per=perceptionPhrase(),act=actionsPhrase();
+    let first=josa(who,'은','는');
+    if(wa)first+=' '+wa;
+    if(sp&&sig)first+=` ${sp}에서 ${josa(sig,'을','를')} ${per}`;
+    else if(sig)first+=` ${josa(sig,'을','를')} ${per}`;
+    else if(sp)first+=` ${sp}에서 이상징후를 ${per}`;
+    if(act)first+=' '+act;
+    first+='한 건으로,';
+    return [first,arrivalSentence(),investigationSentence()].filter(Boolean).join(' ').replace(/\s+/g,' ').replace(/\.\s*\./g,'.').trim();
   }
 
-  function makeSingle(group,title,otherLabel){
-    return `<div class="ovBlock"><div class="ovLabel">${title}</div><div class="ovChoices">${SINGLE[group].map(x=>`<button type="button" class="ovBtn" data-single="${group}" data-key="${x[0]}">${x[1]}</button>`).join('')}</div><input id="ov_${group}Other" class="ovOther" placeholder="${otherLabel||'기타 내용 직접입력'}"></div>`;
-  }
-  function makeMulti(group,title){
-    return `<div class="ovBlock"><div class="ovLabel">${title}<span class="ovMini">복수 선택 가능</span></div><div class="ovChoices">${MULTI[group].map(x=>`<button type="button" class="ovBtn" data-multi="${group}" data-key="${x[0]}">${x[1]}</button>`).join('')}</div>${group==='marks'?'<input id="ov_markOther" class="ovOther" placeholder="기타 조사흔적 직접입력">':''}</div>`;
-  }
-  function years(){let out='<option value="">출생연도</option>';for(let y=new Date().getFullYear();y>=1900;y--)out+=`<option>${y}</option>`;return out}
-  function style(){
-    if($('ovStyle'))return;const s=document.createElement('style');s.id='ovStyle';s.textContent=`
-      .ovWrap{margin:10px 0 14px;border:1px solid #d9dde5;border-radius:14px;padding:12px;background:#f8fafc}.ovTop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:9px}.ovTitle{font-weight:950;font-size:16px}.ovSub{font-size:12px;color:#667085;line-height:1.45}.ovBlock{padding:10px 0;border-top:1px solid #e5e7eb}.ovBlock:first-of-type{border-top:0}.ovLabel{font-weight:900;font-size:14px;margin-bottom:7px}.ovMini{font-size:11px;color:#667085;font-weight:700;margin-left:7px}.ovChoices{display:flex;flex-wrap:wrap;gap:6px}.ovBtn{min-height:40px;padding:8px 10px;border:1px solid #cfd4dc;background:#fff;border-radius:10px;font-weight:850;font-size:13px;color:#344054}.ovBtn.on{background:#111827;color:#fff;border-color:#111827}.ovBtn.import.on{background:#eef2ff;color:#3730a3;border-color:#4f46e5}.ovOther{margin-top:7px}.ovReporterGrid{display:grid;grid-template-columns:1.3fr .8fr 1fr;gap:7px;margin-top:8px}.ovGender{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ovGender button{height:42px;border:1px solid #cfd4dc;background:#fff;border-radius:9px;font-weight:900}.ovGender button.on{background:#111827;color:#fff}.ovPreview{margin-top:10px;background:#fff;border:2px solid #d1d5db;border-radius:12px;padding:11px;font-size:14px;line-height:1.65;min-height:76px;white-space:pre-wrap}.ovActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.ovActions button{height:44px;border:0;border-radius:10px;font-weight:900}.ovApply{background:#b91c1c;color:#fff}.ovReset{background:#e5e7eb;color:#111827}.ovStatus{font-size:12px;color:#166534;font-weight:800;margin-top:6px}.ovCauseBtns{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0}.ovCauseBtns button{min-height:38px;padding:7px 9px;border:1px solid #cfd4dc;background:#fff;border-radius:9px;font-weight:800;font-size:12px}.ovCauseBtns button.on{background:#eef2ff;color:#3730a3;border-color:#4f46e5}@media(max-width:620px){.ovReporterGrid{grid-template-columns:1fr 1fr}.ovReporterGrid .ovName{grid-column:1/-1}.ovActions{grid-template-columns:1fr}}
-    `;document.head.appendChild(s)
-  }
-  function html(){
-    return `<div id="overviewBuilder" class="ovWrap"><div class="ovTop"><div><div class="ovTitle">사고개요 선택식 자동작성</div><div class="ovSub">AI 미사용 · 필요한 항목만 터치하고 특이사항만 짧게 직접입력</div></div></div>
-      <div class="ovBlock"><div class="ovLabel">1. 신고자 인적사항</div><div class="ovChoices"><button type="button" class="ovBtn import" data-import="owner">소유자 불러오기</button><button type="button" class="ovBtn import" data-import="occupant">점유자 불러오기</button><button type="button" class="ovBtn import" data-import="related">관계인 불러오기</button><button type="button" class="ovBtn import" data-import="direct">직접입력</button></div><div class="ovReporterGrid"><label class="ovName">성명<input id="ovReporterName" placeholder="신고자 성명"></label><label>성별<div class="ovGender"><button type="button" id="ovRepM">남</button><button type="button" id="ovRepF">여</button></div></label><label>출생연도<select id="ovReporterBirth">${years()}</select></label></div><div id="ovReporterMsg" class="ovSub" style="margin-top:6px"></div></div>
-      ${makeSingle('situation','2. 화재 전 상황','예: 축사 내부에서 사료 배합 작업 중')}
-      ${makeSingle('anomaly','3. 최초 이상 발견','예: 보일러실 쪽에서 금속 부딪히는 소리를 듣고')}
-      <div class="ovBlock"><div class="ovLabel">4. 발견 위치</div><input id="ovDiscoverPlace" placeholder="자주 쓰는 장소만 짧게 입력 · 예: 보일러실 벽면 콘센트 부근"></div>
-      ${makeSingle('discovery','5. 최초 발견 내용','예: 배전반 내부에서 불꽃을 발견하여')}
-      ${makeMulti('actions','6. 신고·초기조치')}
-      ${makeSingle('arrival','7. 소방대 현장 도착 상황','예: 공장 내부 기계설비 주변에서 연소 중이었으며')}
-      <div class="ovBlock"><div class="ovLabel">8. 현장조사 위치</div><input id="ovInvestigatePlace" placeholder="예: 화목난로 장작 투입구 부근 / 보일러 플러그측 전원선"></div>
-      ${makeMulti('marks','9. 현장조사 흔적')}
-      <div class="ovBlock"><div class="ovLabel">10. 원인 빠른선택</div><div class="ovCauseBtns">${CAUSES.map(c=>`<button type="button" data-cause="${esc(c)}">${c}</button>`).join('')}</div><div class="ovSub">선택하면 아래 기존 원인란에 자동 반영됩니다. 직접 수정도 가능합니다.</div></div>
-      <div class="ovBlock"><div class="ovLabel">자동작성 미리보기</div><div id="overviewPreview" class="ovPreview">선택한 내용으로 사고개요 문장이 여기에 표시됩니다.</div><div class="ovActions"><button type="button" id="overviewApply" class="ovApply">사고개요에 적용</button><button type="button" id="overviewReset" class="ovReset">선택 초기화</button></div><div id="overviewApplyStatus" class="ovStatus"></div></div>
-    </div>`;
+  function chipList(list,type){return list.map(x=>`<button type="button" class="ov11Chip" data-${type}="${x[0]}">${x[1]}</button>`).join('')}
+  function selectOther(id,label,list,otherId,placeholder){return `<div class="ov11Field"><label>${label}<select id="${id}">${optionHtml(list,'',placeholder||'선택')}</select></label><input id="${otherId}" class="ov11Other" placeholder="직접입력" style="display:none"></div>`}
+  function makeUI(){
+    const summary=$('summary');if(!summary||$('overviewBuilderV311'))return;
+    document.querySelectorAll('.ovWrap').forEach(x=>x.remove());
+    injectStyle();
+    const box=document.createElement('div');box.id='overviewBuilderV311';box.className='ov11Wrap';box.innerHTML=`
+      <div class="ov11Head"><div><div class="ov11Title">사고개요 선택작성</div><div class="ov11Sub">고정 문맥은 앱이 만들고, 현장에서는 필요한 부분만 선택합니다. 2025년 보고서 표현을 반영했습니다.</div></div><span class="ov11Badge">V3.11</span></div>
+      <input type="hidden" id="overviewBuilderJson">
+      <div class="ov11Block"><div class="ov11Label">문장 유형</div><div class="ov11Chips" id="ov11Modes">${MODES.map(x=>`<button type="button" class="ov11Chip" data-mode="${x[0]}">${x[1]}</button>`).join('')}</div></div>
+      <div class="ov11Block"><div class="ov11Label">① 신고자</div><div class="ov11Chips"><button type="button" class="ov11Chip import" data-import="owner">소유자 불러오기</button><button type="button" class="ov11Chip import" data-import="occupant">점유자 불러오기</button><button type="button" class="ov11Chip import" data-import="related">관계인 불러오기</button><button type="button" class="ov11Chip import" data-import="direct">직접입력</button></div><div class="ov11Reporter"><input id="ov11ReporterName" placeholder="신고자 성명"><div class="ov11Gender"><button type="button" data-gender="남">남</button><button type="button" data-gender="여">여</button></div><select id="ov11ReporterBirth"><option value="">출생연도</option>${Array.from({length:new Date().getFullYear()-1899},(_,i)=>new Date().getFullYear()-i).map(y=>`<option>${y}</option>`).join('')}</select></div></div>
+      <div class="ov11Block"><div class="ov11Label">② 신고 전 상황</div><div class="ov11Grid">${selectOther('ov11Where','당시 위치',PLACES,'ov11_whereOther','어디에 있었나')}${selectOther('ov11SignalPlace','이상징후 발견 위치',PLACES,'ov11_signalPlaceOther','어디서 발견했나')}</div><div class="ov11Small">무엇을 하는 중</div><div class="ov11Chips">${chipList(ACTIVITIES,'activity')}</div><input id="ov11ActivityOther" class="ov11Other" placeholder="기타 행동 직접입력" style="display:none"><div class="ov11Small">무엇을 발견했나 <span>복수선택</span></div><div class="ov11Chips">${chipList(SIGNALS,'signal')}</div><input id="ov11SignalOther" class="ov11Other" placeholder="기타 이상징후 직접입력"><div class="ov11Small">어떻게 인지했나</div><div class="ov11Chips">${chipList(PERCEPTIONS,'perception')}</div><div class="ov11Small">신고·초기조치 <span>복수선택</span></div><div class="ov11Chips">${chipList(ACTIONS,'action')}</div><input id="ov11ActionOther" class="ov11Other" placeholder="기타 조치 직접입력"></div>
+      <div class="ov11Block"><div class="ov11Label">③ 선착대 현장도착 당시</div><div class="ov11Grid">${selectOther('ov11ArrivalOrigin','화재가 발생·연소 중인 위치',PLACES,'ov11_arrivalOriginOther','어디서')}${selectOther('ov11ArrivalSpread','연소 확대 방향·대상',SPREADS,'ov11_arrivalSpreadOther','어디로')}</div><div class="ov11Small">현장 상태</div><div class="ov11Chips">${chipList(ARRIVAL_STATES,'arrival')}</div><input id="ov11ArrivalStateOther" class="ov11Other" placeholder="기타 현장상태 직접입력" style="display:none"></div>
+      <div class="ov11Block"><div class="ov11Label">④ 화재조사 판단</div><div class="ov11Small">판단 근거 <span>복수선택</span></div><div class="ov11Chips">${chipList(EVIDENCE,'evidence')}</div><input id="ov11EvidenceOther" class="ov11Other" placeholder="기타 판단근거 직접입력"><div class="ov11Grid">${selectOther('ov11InvestOrigin','발화지점',PLACES,'ov11_investOriginOther','어디서 발화')}${selectOther('ov11InvestSpread','연소확대 경로·대상',SPREADS,'ov11_investSpreadOther','어디로 확대')}</div><div class="ov11Small">사용·연결 상태 <span>복수선택 · 2025 자료 반영</span></div><div class="ov11Chips">${chipList(USE_STATE,'use')}</div><input id="ov11UseOther" class="ov11Other" placeholder="예: 노출콘센트(2구)에 3구 멀티콘센트를 연결 후 보일러 전원 플러그 사용"><div class="ov11Small">관찰사항 <span>복수선택</span></div><div class="ov11Chips">${chipList(OBSERVATIONS,'observation')}</div><input id="ov11ObservationOther" class="ov11Other" placeholder="기타 관찰사항 직접입력"></div>
+      <div class="ov11PreviewTitle">완성 문장 미리보기</div><div id="ov11Preview" class="ov11Preview"></div><div class="ov11Btns"><button type="button" id="ov11Reset" class="btn gray">선택 초기화</button><button type="button" id="ov11Apply" class="btn red">사고개요에 적용</button></div><div id="ov11Status" class="status"></div>`;
+    const label=summary.closest('label');(label||summary).insertAdjacentElement('beforebegin',box);
+    bind();restoreState();syncAll();render();
   }
 
-  function updateButtons(){
-    document.querySelectorAll('#overviewBuilder [data-single]').forEach(b=>b.classList.toggle('on',state[b.dataset.single]===b.dataset.key));
-    document.querySelectorAll('#overviewBuilder [data-multi]').forEach(b=>b.classList.toggle('on',state[b.dataset.multi].includes(b.dataset.key)));
-    document.querySelectorAll('#overviewBuilder [data-import]').forEach(b=>b.classList.toggle('on',state.reporter.source===b.dataset.import));
-    $('ovRepM')?.classList.toggle('on',state.reporter.gender==='남');$('ovRepF')?.classList.toggle('on',state.reporter.gender==='여');
-    document.querySelectorAll('#overviewBuilder [data-cause]').forEach(b=>b.classList.toggle('on',($('cause')?.value||'')===b.dataset.cause));
-    ['situation','anomaly','discovery','arrival'].forEach(g=>{const e=$('ov_'+g+'Other');if(e)e.style.display=state[g]==='other'?'block':'none'});
-  }
-  function syncReporterUI(){if($('ovReporterName'))$('ovReporterName').value=state.reporter.name;if($('ovReporterBirth'))$('ovReporterBirth').value=state.reporter.birthYear;updateButtons()}
-  function syncInputs(){
-    syncReporterUI();
-    $('ovDiscoverPlace').value=state.discoverPlace;$('ovInvestigatePlace').value=state.investigatePlace;$('ov_markOther').value=state.markOther;
-    ['situation','anomaly','discovery','arrival'].forEach(g=>{$('ov_'+g+'Other').value=state[g+'Other']});
-  }
+  function injectStyle(){if($('ov11Style'))return;const s=document.createElement('style');s.id='ov11Style';s.textContent=`
+    .ov11Wrap{margin:10px 0 14px;padding:12px;border:1px solid #d9dde5;border-radius:14px;background:#f8fafc}.ov11Head{display:flex;justify-content:space-between;gap:8px}.ov11Title{font-size:17px;font-weight:950}.ov11Sub{font-size:12px;color:#667085;line-height:1.5;margin-top:3px}.ov11Badge{font-size:11px;font-weight:900;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:5px 8px;height:max-content}.ov11Block{padding:12px 0;border-top:1px solid #e5e7eb}.ov11Block:nth-of-type(2){border-top:0}.ov11Label{font-weight:950;margin-bottom:8px}.ov11Small{font-size:12px;font-weight:900;margin:10px 0 6px;color:#344054}.ov11Small span{font-weight:700;color:#667085}.ov11Chips{display:flex;flex-wrap:wrap;gap:6px}.ov11Chip{min-height:39px;padding:8px 10px;border:1px solid #cfd4dc;background:#fff;border-radius:9px;font-weight:850;font-size:13px;color:#344054}.ov11Chip.on{background:#111827;color:#fff;border-color:#111827}.ov11Chip.import.on{background:#eef2ff;color:#3730a3;border-color:#4f46e5}.ov11Grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ov11Field label{margin:0}.ov11Other{margin-top:7px}.ov11Reporter{display:grid;grid-template-columns:1.25fr .8fr 1fr;gap:7px;margin-top:8px}.ov11Gender{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ov11Gender button{height:43px;border:1px solid #cfd4dc;background:#fff;border-radius:9px;font-weight:900}.ov11Gender button.on{background:#111827;color:#fff}.ov11PreviewTitle{font-size:13px;font-weight:950;margin:10px 0 6px}.ov11Preview{background:#fff;border:2px solid #d1d5db;border-radius:12px;padding:12px;line-height:1.75;font-size:14px;min-height:90px;white-space:pre-wrap}.ov11Btns{display:grid;grid-template-columns:1fr 1.3fr;gap:8px}.ov11Btns .btn{width:100%;min-height:46px}@media(max-width:620px){.ov11Grid,.ov11Reporter{grid-template-columns:1fr}.ov11Chip{flex:1 1 calc(50% - 6px)}.ov11Chips .ov11Chip:nth-last-child(1):nth-child(odd){flex-basis:100%}}
+  `;document.head.appendChild(s)}
+
   function bind(){
-    document.querySelectorAll('#overviewBuilder [data-single]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.single,k=b.dataset.key;state[g]=state[g]===k?'':k;renderPreview()}));
-    document.querySelectorAll('#overviewBuilder [data-multi]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.multi,k=b.dataset.key,a=state[g],i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);renderPreview()}));
-    document.querySelectorAll('#overviewBuilder [data-import]').forEach(b=>b.addEventListener('click',()=>{
-      const src=b.dataset.import;if(src==='direct'){setReporter({name:'',gender:'',birthYear:''},'direct');$('ovReporterMsg').textContent='신고자 정보를 직접 입력하세요.';return}
-      const p=relationPerson(src);if(!p){$('ovReporterMsg').textContent='앞의 관계인 등에서 해당 인적사항을 먼저 입력해 주세요.';return}setReporter(p,src);$('ovReporterMsg').textContent='관계인 등에서 신고자 정보를 불러왔습니다.';
-    }));
-    $('ovReporterName').addEventListener('input',e=>{state.reporter.name=e.target.value;state.reporter.source='direct';renderPreview()});
-    $('ovReporterBirth').addEventListener('change',e=>{state.reporter.birthYear=e.target.value;state.reporter.source='direct';renderPreview()});
-    $('ovRepM').onclick=()=>{state.reporter.gender=state.reporter.gender==='남'?'':'남';state.reporter.source='direct';syncReporterUI();renderPreview()};
-    $('ovRepF').onclick=()=>{state.reporter.gender=state.reporter.gender==='여'?'':'여';state.reporter.source='direct';syncReporterUI();renderPreview()};
-    $('ovDiscoverPlace').addEventListener('input',e=>{state.discoverPlace=e.target.value;renderPreview()});
-    $('ovInvestigatePlace').addEventListener('input',e=>{state.investigatePlace=e.target.value;renderPreview()});
-    $('ov_markOther').addEventListener('input',e=>{state.markOther=e.target.value;renderPreview()});
-    ['situation','anomaly','discovery','arrival'].forEach(g=>$('ov_'+g+'Other').addEventListener('input',e=>{state[g+'Other']=e.target.value;renderPreview()}));
-    document.querySelectorAll('#overviewBuilder [data-cause]').forEach(b=>b.addEventListener('click',()=>{if($('cause')){$('cause').value=b.dataset.cause;$('cause').dispatchEvent(new Event('input',{bubbles:true}));$('cause').dispatchEvent(new Event('change',{bubbles:true}))}renderPreview()}));
-    $('cause')?.addEventListener('input',renderPreview);
-    $('overviewApply').onclick=applySummary;$('overviewReset').onclick=clearBuilder;
+    const root=$('overviewBuilderV311');
+    root.addEventListener('click',e=>{
+      const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.mode){state.mode=b.dataset.mode;render();return}
+      if(b.dataset.import){const r=b.dataset.import;if(r==='direct'){setReporter({name:'',gender:'',birthYear:''},'direct');return}setReporter(relationPerson(r),r);return}
+      if(b.dataset.gender){state.reporter.gender=b.dataset.gender;syncReporter();render();return}
+      const single=[['activity','activity'],['perception','perception'],['arrival','arrivalState']];
+      for(const [d,k] of single)if(b.dataset[d]){state[k]=b.dataset[d];render();return}
+      const multi=[['signal','signals'],['action','actions'],['evidence','evidence'],['use','useState'],['observation','observations']];
+      for(const [d,k] of multi)if(b.dataset[d]){const v=b.dataset[d],a=state[k],i=a.indexOf(v);i>=0?a.splice(i,1):a.push(v);render();return}
+    });
+    const map=[
+      ['ov11Where','where','ov11_whereOther'],['ov11SignalPlace','signalPlace','ov11_signalPlaceOther'],['ov11ArrivalOrigin','arrivalOrigin','ov11_arrivalOriginOther'],['ov11ArrivalSpread','arrivalSpread','ov11_arrivalSpreadOther'],['ov11InvestOrigin','investOrigin','ov11_investOriginOther'],['ov11InvestSpread','investSpread','ov11_investSpreadOther']
+    ];
+    map.forEach(([id,key,oid])=>$(id).addEventListener('change',e=>{state[key]=e.target.value;$(oid).style.display=e.target.value==='기타'?'block':'none';render()}));
+    const inputs=[['ov11ReporterName','reporter.name'],['ov11ReporterBirth','reporter.birthYear'],['ov11ActivityOther','activityOther'],['ov11SignalOther','signalOther'],['ov11ActionOther','actionOther'],['ov11ArrivalStateOther','arrivalStateOther'],['ov11EvidenceOther','evidenceOther'],['ov11UseOther','useOther'],['ov11ObservationOther','observationOther'],['ov11_whereOther','whereOther'],['ov11_signalPlaceOther','signalPlaceOther'],['ov11_arrivalOriginOther','arrivalOriginOther'],['ov11_arrivalSpreadOther','arrivalSpreadOther'],['ov11_investOriginOther','investOriginOther'],['ov11_investSpreadOther','investSpreadOther']];
+    inputs.forEach(([id,path])=>$(id)?.addEventListener(id==='ov11ReporterBirth'?'change':'input',e=>{setPath(path,e.target.value);render()}));
+    $('ov11Apply').onclick=()=>{const s=$('summary');s.value=buildText();s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}));$('ov11Status').textContent='✓ 사고개요에 적용됨'};
+    $('ov11Reset').onclick=reset;
+    $('cause')?.addEventListener('input',render);$('cause')?.addEventListener('change',render);
   }
-
-  function install(){
-    style();const summary=$('summary');if(!summary||$('overviewBuilder'))return;
-    const label=summary.closest('label');if(!label)return;
-    label.insertAdjacentHTML('beforebegin',html());
-    const card=summary.closest('.card');const hint=card?.querySelector('.hint');if(hint)hint.textContent='AI 없이 선택한 내용을 자동으로 조합합니다. 특이한 내용만 직접 수정하세요.';
-    summary.placeholder='위 선택식 자동작성 결과를 적용한 뒤 필요한 부분만 직접 수정';
-    summary.style.minHeight='150px';
-    bind();syncInputs();renderPreview();
-    const h=document.querySelector('header h1');if(h)h.textContent='🔥 완주소방서 화재상황보고 V3.9';document.title='완주소방서 화재상황보고 V3.9';
+  function setPath(path,val){if(path.startsWith('reporter.'))state.reporter[path.split('.')[1]]=val;else state[path]=val}
+  function syncReporter(){$('ov11ReporterName').value=state.reporter.name||'';$('ov11ReporterBirth').value=state.reporter.birthYear||'';document.querySelectorAll('[data-gender]').forEach(b=>b.classList.toggle('on',b.dataset.gender===state.reporter.gender));document.querySelectorAll('[data-import]').forEach(b=>b.classList.toggle('on',b.dataset.import===state.reporter.source))}
+  function syncAll(){
+    const selects=[['ov11Where','where','ov11_whereOther','whereOther'],['ov11SignalPlace','signalPlace','ov11_signalPlaceOther','signalPlaceOther'],['ov11ArrivalOrigin','arrivalOrigin','ov11_arrivalOriginOther','arrivalOriginOther'],['ov11ArrivalSpread','arrivalSpread','ov11_arrivalSpreadOther','arrivalSpreadOther'],['ov11InvestOrigin','investOrigin','ov11_investOriginOther','investOriginOther'],['ov11InvestSpread','investSpread','ov11_investSpreadOther','investSpreadOther']];
+    selects.forEach(([id,k,oid,ok])=>{if($(id))$(id).value=state[k]||'';if($(oid)){$(oid).value=state[ok]||'';$(oid).style.display=state[k]==='기타'?'block':'none'}});
+    $('ov11ActivityOther').value=state.activityOther||'';$('ov11ActivityOther').style.display=state.activity==='other'?'block':'none';$('ov11SignalOther').value=state.signalOther||'';$('ov11ActionOther').value=state.actionOther||'';$('ov11ArrivalStateOther').value=state.arrivalStateOther||'';$('ov11ArrivalStateOther').style.display=state.arrivalState==='other'?'block':'none';$('ov11EvidenceOther').value=state.evidenceOther||'';$('ov11UseOther').value=state.useOther||'';$('ov11ObservationOther').value=state.observationOther||'';syncReporter()
   }
+  function render(){
+    document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===state.mode));
+    document.querySelectorAll('[data-activity]').forEach(b=>b.classList.toggle('on',b.dataset.activity===state.activity));
+    document.querySelectorAll('[data-perception]').forEach(b=>b.classList.toggle('on',b.dataset.perception===state.perception));
+    document.querySelectorAll('[data-arrival]').forEach(b=>b.classList.toggle('on',b.dataset.arrival===state.arrivalState));
+    [['signal','signals'],['action','actions'],['evidence','evidence'],['use','useState'],['observation','observations']].forEach(([d,k])=>document.querySelectorAll(`[data-${d}]`).forEach(b=>b.classList.toggle('on',state[k].includes(b.dataset[d]))));
+    if($('ov11ActivityOther'))$('ov11ActivityOther').style.display=state.activity==='other'?'block':'none';if($('ov11ArrivalStateOther'))$('ov11ArrivalStateOther').style.display=state.arrivalState==='other'?'block':'none';
+    syncReporter();const p=$('ov11Preview');if(p)p.textContent=buildText();const h=$('overviewBuilderJson');if(h)h.value=JSON.stringify(state)
+  }
+  function reset(){Object.assign(state,{mode:'normal',reporter:{name:'',gender:'',birthYear:'',source:'direct'},where:'',whereOther:'',activity:'',activityOther:'',signalPlace:'',signalPlaceOther:'',signals:[],signalOther:'',perception:'abnormal',actions:['119'],actionOther:'',arrivalOrigin:'',arrivalOriginOther:'',arrivalSpread:'',arrivalSpreadOther:'',arrivalState:'burning',arrivalStateOther:'',evidence:['related','pattern','char'],evidenceOther:'',investOrigin:'',investOriginOther:'',investSpread:'',investSpreadOther:'',useState:[],useOther:'',observations:[],observationOther:''});syncAll();render();$('ov11Status').textContent=''}
+  function restoreState(){try{const d=JSON.parse(localStorage.getItem('wanjuFireReportV2')||'{}');if(d.overviewBuilderJson){Object.assign(state,JSON.parse(d.overviewBuilderJson));if(d.overviewBuilderJson&&typeof state.reporter!=='object')state.reporter={name:'',gender:'',birthYear:'',source:'direct'}}}catch(e){}}
+  function patchCollect(){try{const old=collect;collect=function(){const d=old();d.overviewBuilder={...state,reporter:{...state.reporter}};d.overviewBuilderText=buildText();return d}}catch(e){}}
+  function setVersion(){const h=document.querySelector('header h1');if(h)h.textContent='🔥 완주소방서 화재상황보고 V3.11';document.title='완주소방서 화재상황보고 V3.11'}
+  function install(){makeUI();patchCollect();setVersion();setTimeout(setVersion,700)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,140));else setTimeout(install,140);
 })();
