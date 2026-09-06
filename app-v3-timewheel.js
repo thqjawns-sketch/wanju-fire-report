@@ -1,6 +1,6 @@
 /* Wanju Fire Report V3.6 - universal 24-hour time wheel
  * Receipt time: HH:MM:SS
- * End time / all action times: HH:MM
+ * Operational action times: HH:MM
  */
 (function(){
   'use strict';
@@ -139,9 +139,13 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0));else setTimeout(install,0);
 })();
 (function(){
+  function loadPolish(){
+    if(document.getElementById('wanjuPolishScript'))return;
+    const p=document.createElement('script');p.id='wanjuPolishScript';p.src='app-v3-polish.js?v=20260906a';p.defer=true;document.head.appendChild(p);
+  }
   function loadCause(){
-    if(document.getElementById('wanjuFireCauseScript'))return;
-    const c=document.createElement('script');c.id='wanjuFireCauseScript';c.src='app-v3-fire-cause.js?v=20260905e';c.defer=true;document.head.appendChild(c);
+    if(document.getElementById('wanjuFireCauseScript')){setTimeout(loadPolish,180);return}
+    const c=document.createElement('script');c.id='wanjuFireCauseScript';c.src='app-v3-fire-cause.js?v=20260906a';c.defer=true;c.onload=()=>setTimeout(loadPolish,160);document.head.appendChild(c);setTimeout(loadPolish,750);
   }
   function loadOverview(){
     if(document.getElementById('wanjuOverviewBuilderScript')){setTimeout(loadCause,80);return}
@@ -149,5 +153,5 @@
   }
   const existing=document.getElementById('wanjuRelationsScript');
   if(existing){existing.addEventListener('load',loadOverview,{once:true});setTimeout(loadOverview,350);return}
-  const s=document.createElement('script');s.id='wanjuRelationsScript';s.src='app-v3-relations.js?v=20260905c';s.defer=true;s.onload=loadOverview;document.head.appendChild(s);
+  const s=document.createElement('script');s.id='wanjuRelationsScript';s.src='app-v3-relations.js?v=20260906a';s.defer=true;s.onload=loadOverview;document.head.appendChild(s);
 })();
