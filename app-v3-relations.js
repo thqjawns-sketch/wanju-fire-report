@@ -41,7 +41,7 @@
     const cv=$('relationContactView');if(cv)cv.textContent=contactSummary()?`연락처 저장: ${contactSummary()}`:'연락처 입력 없음';
   }
   function toggleRole(role){state[role].active=!state[role].active;render();saveState()}
-  function setGender(role,g){state[role].gender=g;render();saveState()}
+  function setGender(role,g){state[role].gender=state[role].gender===g?'':g;render();saveState()}
   function setField(role,key,val){state[role][key]=val;saveState()}
   function setPhone(role,val){state[role].phone=formatPhone(val);const e=$('relPhone_'+role);if(e&&e.value!==state[role].phone)e.value=state[role].phone;saveState()}
 
