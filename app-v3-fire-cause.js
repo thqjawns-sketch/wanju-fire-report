@@ -86,16 +86,17 @@
   }
 
   function selectMain(id,val){
+    if(state[mainKey(id)]===val){state[mainKey(id)]='';state[subKey(id)]='';renderAll(true);return}
     state[mainKey(id)]=val;state[subKey(id)]='';
     const list=dataFor(id)[val]||[];if(list.length===1)state[subKey(id)]=list[0];
     renderAll(true);
   }
-  function selectSub(id,val){state[subKey(id)]=val;renderAll(true)}
+  function selectSub(id,val){state[subKey(id)]=state[subKey(id)]===val?'':val;renderAll(true)}
 
   function bind(){
     $('nfdsCause').addEventListener('click',e=>{
       const b=e.target.closest('button');if(!b)return;
-      if(b.dataset.decision){state.decision=b.dataset.decision;renderAll(true);return}
+      if(b.dataset.decision){state.decision=state.decision===b.dataset.decision?'':b.dataset.decision;renderAll(true);return}
       const kind=b.dataset.kind,val=b.dataset.value;if(!kind)return;
       const m=kind.match(/^(heat|factor|first)(Main|Sub)$/);if(!m)return;
       m[2]==='Main'?selectMain(m[1],val):selectSub(m[1],val);
@@ -103,33 +104,34 @@
   }
 
   function reportCause(){
-    const m=state.factorMain,s=state.factorSub,d=state.decision||'추정';
+    const m=state.factorMain,s=state.factorSub,d=state.decision||'';
     if(!m)return '조사 중';
     if(m==='미상')return '미상';
     if(!s)return '조사 중';
-    if(m==='전기적 요인')return `전기적(${s}) 요인 ${d}`;
-    if(m==='기계적 요인')return `기계적(${s}) 요인 ${d}`;
-    if(m==='화학적 요인')return `화학적(${s}) 요인 ${d}`;
-    if(m==='자연적인 요인')return `자연적(${s}) 요인 ${d}`;
-    if(m==='부주의')return `부주의(${s}) 요인 ${d}`;
-    if(m==='제품결함')return `제품결함(${s}) ${d}`;
-    if(m==='방화')return s==='방화의심'?`방화의심 ${d}`:`방화 ${d}`;
-    if(m==='가스누출(폭발)')return `가스누출(폭발) ${d}`;
-    if(m==='교통사고')return `교통사고 ${d}`;
-    if(m==='기타')return `기타 ${d}`;
-    return `${m}${s?`(${s})`:''} ${d}`;
+    const suffix=d?` ${d}`:'';
+    if(m==='전기적 요인')return `전기적(${s}) 요인${suffix}`;
+    if(m==='기계적 요인')return `기계적(${s}) 요인${suffix}`;
+    if(m==='화학적 요인')return `화학적(${s}) 요인${suffix}`;
+    if(m==='자연적인 요인')return `자연적(${s}) 요인${suffix}`;
+    if(m==='부주의')return `부주의(${s}) 요인${suffix}`;
+    if(m==='제품결함')return `제품결함(${s})${suffix}`;
+    if(m==='방화')return s==='방화의심'?`방화의심${suffix}`:`방화${suffix}`;
+    if(m==='가스누출(폭발)')return `가스누출(폭발)${suffix}`;
+    if(m==='교통사고')return `교통사고${suffix}`;
+    if(m==='기타')return `기타${suffix}`;
+    return `${m}${s?`(${s})`:''}${suffix}`;
   }
 
   function syncCause(){
     const c=$('cause'),text=reportCause();if(!c)return;
-    if(state.factorMain){c.value=text;c.dispatchEvent(new Event('input',{bubbles:true}));c.dispatchEvent(new Event('change',{bubbles:true}))}
-    const out=$('nfdsReportCause');if(out)out.textContent='보고서 원인: '+(state.factorMain?text:(c.value||'조사 중'));
+    c.value=state.factorMain?text:'조사 중';c.dispatchEvent(new Event('input',{bubbles:true}));c.dispatchEvent(new Event('change',{bubbles:true}));
+    const out=$('nfdsReportCause');if(out)out.textContent='보고서 원인: '+(state.factorMain?text:'조사 중');
   }
 
   function renderSummary(){
     const e=$('nfdsCauseSummary');if(!e)return;
     const row=(name,a,b)=>`<div><b>${name}</b>${a?`${a}${b?' > '+b:''}`:'미선택'}</div>`;
-    e.innerHTML=row('발화열원',state.heatMain,state.heatSub)+row('발화요인',state.factorMain,state.factorSub)+`<div><b>판정구분</b>${state.decision}</div>`+row('최초착화물',state.firstMain,state.firstSub);
+    e.innerHTML=row('발화열원',state.heatMain,state.heatSub)+row('발화요인',state.factorMain,state.factorSub)+`<div><b>판정구분</b>${state.decision||'미선택'}</div>`+row('최초착화물',state.firstMain,state.firstSub);
   }
 
   function saveHidden(){const h=$('nfdsCauseJson');if(h)h.value=JSON.stringify(state)}
