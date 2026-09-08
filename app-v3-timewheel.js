@@ -141,17 +141,17 @@
 (function(){
   function loadPolish(){
     if(document.getElementById('wanjuPolishScript'))return;
-    const p=document.createElement('script');p.id='wanjuPolishScript';p.src='app-v3-polish.js?v=20260908a';p.defer=true;document.head.appendChild(p);
+    const p=document.createElement('script');p.id='wanjuPolishScript';p.src='app-v3-polish.js?v=20260908b';p.defer=true;document.head.appendChild(p);
   }
   function loadCause(){
     if(document.getElementById('wanjuFireCauseScript')){setTimeout(loadPolish,180);return}
-    const c=document.createElement('script');c.id='wanjuFireCauseScript';c.src='app-v3-fire-cause.js?v=20260906a';c.defer=true;c.onload=()=>setTimeout(loadPolish,160);document.head.appendChild(c);setTimeout(loadPolish,750);
+    const c=document.createElement('script');c.id='wanjuFireCauseScript';c.src='app-v3-fire-cause.js?v=20260908b';c.defer=true;c.onload=()=>setTimeout(loadPolish,160);document.head.appendChild(c);setTimeout(loadPolish,750);
   }
   function loadOverview(){
     if(document.getElementById('wanjuOverviewBuilderScript')){setTimeout(loadCause,80);return}
-    const o=document.createElement('script');o.id='wanjuOverviewBuilderScript';o.src='app-v3-overview-builder.js?v=20260905f';o.defer=true;o.onload=loadCause;document.head.appendChild(o);setTimeout(loadCause,550);
+    const o=document.createElement('script');o.id='wanjuOverviewBuilderScript';o.src='app-v3-overview-builder.js?v=20260908b';o.defer=true;o.onload=loadCause;document.head.appendChild(o);setTimeout(loadCause,550);
   }
   const existing=document.getElementById('wanjuRelationsScript');
   if(existing){existing.addEventListener('load',loadOverview,{once:true});setTimeout(loadOverview,350);return}
-  const s=document.createElement('script');s.id='wanjuRelationsScript';s.src='app-v3-relations.js?v=20260906a';s.defer=true;s.onload=loadOverview;document.head.appendChild(s);
+  const s=document.createElement('script');s.id='wanjuRelationsScript';s.src='app-v3-relations.js?v=20260908b';s.defer=true;s.onload=loadOverview;document.head.appendChild(s);
 })();
