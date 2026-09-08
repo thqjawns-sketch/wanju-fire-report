@@ -141,7 +141,7 @@
 (function(){
   function loadPolish(){
     if(document.getElementById('wanjuPolishScript'))return;
-    const p=document.createElement('script');p.id='wanjuPolishScript';p.src='app-v3-polish.js?v=20260906a';p.defer=true;document.head.appendChild(p);
+    const p=document.createElement('script');p.id='wanjuPolishScript';p.src='app-v3-polish.js?v=20260908a';p.defer=true;document.head.appendChild(p);
   }
   function loadCause(){
     if(document.getElementById('wanjuFireCauseScript')){setTimeout(loadPolish,180);return}
