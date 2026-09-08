@@ -1,8 +1,9 @@
-/* Wanju Fire Report V3.13 - non-overview workflow refinements
+/* Wanju Fire Report V3.14 - non-overview workflow refinements
  * - 종료시간 입력 제거, 조치사항 완진/자체진화 시간 연동
  * - 재산피해 금액 입력 단위 천원 통일 + 항목 삭제
  * - 주요 선택버튼 재터치 시 선택 취소
  * - 조치사항 시간순 정렬
+ * - HWPX 텍스트 수정 후 linesegarray 제거로 손상·변조 경고 방지
  */
 (function(){
   'use strict';
@@ -163,11 +164,33 @@
     const propBtns=$('propertyMode')?.querySelectorAll('button');if(propBtns?.length>=2){propBtns[0].onclick=()=>setPropertyDamage(false);propBtns[1].onclick=()=>val('propertyDamage')==='피해 있음'?setPropertyDamage(false):setPropertyDamage(true)}
   }
 
-  function setVersion(){const h=document.querySelector('header h1');if(h)h.textContent='🔥 완주소방서 화재상황보고 V3.13';document.title='완주소방서 화재상황보고 V3.13'}
+  /* ---------- HWPX 손상·변조 경고 방지 ---------- */
+  function sanitizeHwpxSectionXml(xml){
+    let safe=String(xml||'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+    const doc=new DOMParser().parseFromString(safe,'application/xml');
+    if(doc.getElementsByTagName('parsererror').length)return safe;
+    const ns='http://www.hancom.co.kr/hwpml/2011/paragraph';
+    let nodes=Array.from(doc.getElementsByTagNameNS(ns,'linesegarray'));
+    if(!nodes.length)nodes=Array.from(doc.getElementsByTagName('hp:linesegarray'));
+    nodes.forEach(n=>n.parentNode&&n.parentNode.removeChild(n));
+    return new XMLSerializer().serializeToString(doc);
+  }
+  function patchHwpxSecurityWarning(){
+    try{
+      if(typeof exactPatchSection!=='function'||exactPatchSection.__wanjuLineSegFixed)return;
+      const old=exactPatchSection;
+      const wrapped=function(xml){return sanitizeHwpxSectionXml(old(xml))};
+      wrapped.__wanjuLineSegFixed=true;
+      exactPatchSection=wrapped;
+    }catch(e){console.warn('HWPX linesegarray 정리 적용 실패',e)}
+  }
+
+  function setVersion(){const h=document.querySelector('header h1');if(h)h.textContent='🔥 완주소방서 화재상황보고 V3.14';document.title='완주소방서 화재상황보고 V3.14'}
   function install(){
     hideEndInput();addSortButton();
     patchChoiceContainer('writerC','writer');patchChoiceContainer('bossC','boss');patchChoiceContainer('structureC','structureType',()=>{try{composeStructure()}catch(e){}});patchChoiceContainer('roofC','roofType',()=>{try{composeStructure()}catch(e){}});patchChoiceContainer('riC','ri');patchDamageModeToggle();
     migrateOldWonInputs();relabelMoney();addDamageDeleteButtons();try{updateDamageCalc()}catch(e){}
+    patchHwpxSecurityWarning();
     $('status')?.addEventListener('change',syncDerivedEnd);syncDerivedEnd();setVersion();setTimeout(setVersion,800);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,220));else setTimeout(install,220);
