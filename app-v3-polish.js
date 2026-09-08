@@ -1,9 +1,10 @@
-/* Wanju Fire Report V3.14 - non-overview workflow refinements
+/* Wanju Fire Report V3.15 - non-overview workflow refinements
  * - 종료시간 입력 제거, 조치사항 완진/자체진화 시간 연동
  * - 재산피해 금액 입력 단위 천원 통일 + 항목 삭제
  * - 주요 선택버튼 재터치 시 선택 취소
  * - 조치사항 시간순 정렬
  * - HWPX 텍스트 수정 후 linesegarray 제거로 손상·변조 경고 방지
+ * - 전체 선택형 UI 재터치 취소 동작 재점검
  */
 (function(){
   'use strict';
@@ -185,7 +186,7 @@
     }catch(e){console.warn('HWPX linesegarray 정리 적용 실패',e)}
   }
 
-  function setVersion(){const h=document.querySelector('header h1');if(h)h.textContent='🔥 완주소방서 화재상황보고 V3.14';document.title='완주소방서 화재상황보고 V3.14'}
+  function setVersion(){const h=document.querySelector('header h1');if(h)h.textContent='🔥 완주소방서 화재상황보고 V3.15';document.title='완주소방서 화재상황보고 V3.15'}
   function install(){
     hideEndInput();addSortButton();
     patchChoiceContainer('writerC','writer');patchChoiceContainer('bossC','boss');patchChoiceContainer('structureC','structureType',()=>{try{composeStructure()}catch(e){}});patchChoiceContainer('roofC','roofType',()=>{try{composeStructure()}catch(e){}});patchChoiceContainer('riC','ri');patchDamageModeToggle();
