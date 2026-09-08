@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 
   const MODES=[['normal','일반화재'],['self','자체진화'],['post','사후조사']];
   const SIGNALS=[
@@ -53,7 +53,7 @@
     let g='';['남','여'].forEach(x=>{if($(`relGender_${role}_${x}`)?.classList.contains('on'))g=x});
     return {name:n.value.trim(),gender:g,birthYear:y?.value||''};
   }
-  function setReporter(p,source){state.reporter={name:p?.name||'',gender:p?.gender||'',birthYear:p?.birthYear||'',source:source||'direct'};syncReporter();render()}
+  function setReporter(p,source){state.reporter={name:p?.name||'',gender:p?.gender||'',birthYear:p?.birthYear||'',source:source||''};syncReporter();render()}
   function reporterText(){const r=state.reporter;if(!r.name.trim())return '신고자';const info=[r.gender,r.birthYear?`${r.birthYear}년생`:''].filter(Boolean).join(', ');return `신고자 ${r.name.trim()}${info?`(${info})`:''}`}
 
   function signalsText(){let a=SIGNALS.filter(x=>state.signals.includes(x[0])&&x[0]!=='other').map(x=>x[1]);if(state.signalOther.trim())a.push(state.signalOther.trim());return joinKorean(a)}
@@ -168,11 +168,28 @@
     const root=$('overviewBuilderV312');
     root.addEventListener('click',e=>{
       const b=e.target.closest('button');if(!b)return;
-      if(b.dataset.mode){state.mode=b.dataset.mode;if(state.mode==='post')state.arrivalState='out';else if(state.mode==='self')state.arrivalState='self';else if(['out','self'].includes(state.arrivalState))state.arrivalState='burning';render();return}
-      if(b.dataset.import){const r=b.dataset.import;if(r==='direct'){setReporter({name:'',gender:'',birthYear:''},'direct');return}setReporter(relationPerson(r),r);return}
-      if(b.dataset.gender){state.reporter.gender=b.dataset.gender;syncReporter();render();return}
-      if(b.dataset.perception){state.perception=b.dataset.perception;render();return}
-      if(b.dataset.arrival){state.arrivalState=b.dataset.arrival;render();return}
+      if(b.dataset.mode){
+        const same=state.mode===b.dataset.mode;
+        if(same){
+          if((state.mode==='post'&&state.arrivalState==='out')||(state.mode==='self'&&state.arrivalState==='self'))state.arrivalState='';
+          state.mode='';
+        }else{
+          state.mode=b.dataset.mode;
+          if(state.mode==='post')state.arrivalState='out';
+          else if(state.mode==='self')state.arrivalState='self';
+          else if(['out','self'].includes(state.arrivalState))state.arrivalState='burning';
+        }
+        render();return;
+      }
+      if(b.dataset.import){
+        const r=b.dataset.import;
+        if(state.reporter.source===r){setReporter({name:'',gender:'',birthYear:''},'');return}
+        if(r==='direct'){setReporter({name:'',gender:'',birthYear:''},'direct');return}
+        setReporter(relationPerson(r),r);return;
+      }
+      if(b.dataset.gender){state.reporter.gender=state.reporter.gender===b.dataset.gender?'':b.dataset.gender;syncReporter();render();return}
+      if(b.dataset.perception){state.perception=state.perception===b.dataset.perception?'':b.dataset.perception;render();return}
+      if(b.dataset.arrival){state.arrivalState=state.arrivalState===b.dataset.arrival?'':b.dataset.arrival;render();return}
       const multi=[['signal','signals'],['action','actions'],['evidence','evidence'],['observation','observations']];
       for(const [d,k] of multi)if(b.dataset[d]){const v=b.dataset[d],a=state[k],i=a.indexOf(v);i>=0?a.splice(i,1):a.push(v);render();return}
     });
